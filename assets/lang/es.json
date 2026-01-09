@@ -1,0 +1,23 @@
+
+{
+  "app_title": "Todos Mienten",
+  "create_room": "Crear Sala",
+  "join_room": "Unirse a Sala",
+  "view_rooms": "Ver salas",
+  "available_rooms": "Salas Disponibles",
+  "no_rooms_available": "No hay salas disponibles en este momento.",
+  "join": "Unirse",
+  "waiting_for_players": "Esperando jugadores...",
+  "your_secret_role": "Tu Rol Secreto",
+  "your_role_is": "Tu rol es:",
+  "perform_secret_action": "Realiza tu acción secreta:",
+  "clues_and_discussion": "Pistas y discusión:",
+  "who_is_the_impostor": "¿Quién es el impostor?",
+  "round_result": "Resultado de la Ronda",
+  "player_eliminated": "El jugador eliminado es:",
+  "game_over": "Fin de la Partida",
+  "game_has_ended": "¡El juego ha terminado!",
+  "winners": "Ganadores: [EQUIPO]",
+  "back_to_home": "Volver al Inicio",
+  "character_catalog_title": "Catálogo de Personajes"
+}

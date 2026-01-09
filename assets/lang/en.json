@@ -1,0 +1,23 @@
+
+{
+  "app_title": "Todos Mienten",
+  "create_room": "Create Room",
+  "join_room": "Join Room",
+  "view_rooms": "View Rooms",
+  "available_rooms": "Available Rooms",
+  "no_rooms_available": "No rooms available at the moment.",
+  "join": "Join",
+  "waiting_for_players": "Waiting for players...",
+  "your_secret_role": "Your Secret Role",
+  "your_role_is": "Your role is:",
+  "perform_secret_action": "Perform your secret action:",
+  "clues_and_discussion": "Clues and discussion:",
+  "who_is_the_impostor": "Who is the impostor?",
+  "round_result": "Round Result",
+  "player_eliminated": "The eliminated player is:",
+  "game_over": "Game Over",
+  "game_has_ended": "The game has ended!",
+  "winners": "Winners: [TEAM]",
+  "back_to_home": "Back to Home",
+  "character_catalog_title": "Character Catalog"
+}

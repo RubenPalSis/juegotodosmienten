@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "844223174412",
+    "project_id": "juegotodosmienten",
+    "storage_bucket": "juegotodosmienten.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:844223174412:android:720985221059cb7a0a5b29",
+        "android_client_info": {
+          "package_name": "com.example.juegotodosmienten"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDWc77ADfSKnwxbye7_nUsDjZ1x8KvkHmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

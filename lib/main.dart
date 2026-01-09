@@ -1,122 +1,184 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
-  runApp(const MyApp());
+// Import all screens
+import 'screens/alias_screen.dart';
+import 'screens/avatar_screen.dart';
+import 'screens/create_room_screen.dart';
+import 'screens/customize_avatar_screen.dart';
+import 'screens/day_clue_screen.dart';
+import 'screens/game_over_screen.dart';
+import 'screens/game_rooms_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/lobby_screen.dart';
+import 'screens/night_action_screen.dart';
+import 'screens/role_screen.dart';
+import 'screens/round_result_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/vote_screen.dart';
+
+// Import all services
+import 'services/app_localizations.dart';
+import 'services/character_service.dart';
+import 'services/language_service.dart';
+import 'services/navigation_service.dart';
+import 'services/theme_service.dart';
+import 'services/user_service.dart';
+
+import 'constants/app_constants.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
+  runApp(const TodosMientenApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class TodosMientenApp extends StatelessWidget {
+  const TodosMientenApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo1',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+    return MultiProvider(
+      providers: [
+        Provider(create: (_) => CharacterService()),
+        ChangeNotifierProvider(create: (_) => LanguageService()),
+        ChangeNotifierProvider(create: (_) => ThemeService()),
+        ChangeNotifierProvider(create: (_) => UserService()),
+      ],
+      child: Consumer2<LanguageService, ThemeService>(
+        builder: (context, languageService, themeService, child) {
+          return MaterialApp(
+            title: AppConstants.appName,
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeService.themeMode,
+            locale: languageService.appLocale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            navigatorKey: NavigationService.navigatorKey,
+            home: const FirebaseInitializer(), // Set new home
+            onGenerateRoute: _onGenerateRoute,
+          );
+        },
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+// Widget to handle Firebase Initialization robustly
+class FirebaseInitializer extends StatefulWidget {
+  const FirebaseInitializer({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<FirebaseInitializer> createState() => _FirebaseInitializerState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _FirebaseInitializerState extends State<FirebaseInitializer> {
+  Future<FirebaseApp>? _initialization;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _initialization = _initializeFirebase();
+  }
+
+  // This is the definitive way to initialize Firebase safely.
+  Future<FirebaseApp> _initializeFirebase() async {
+    if (Firebase.apps.isNotEmpty) {
+      return Firebase.app(); // Use existing app
+    }
+    return Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+    return FutureBuilder(
+      future: _initialization,
+      builder: (context, snapshot) {
+        // Check for errors
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(
+              child: Text("Error initializing Firebase: ${snapshot.error}", textAlign: TextAlign.center),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+          );
+        }
+
+        // Once complete, show your application
+        if (snapshot.connectionState == ConnectionState.done) {
+          return const HomeScreen();
+        }
+
+        // Otherwise, show something whilst waiting for initialization to complete
+        return const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
     );
   }
+}
+
+
+// Use onGenerateRoute to handle all routes with arguments
+Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
+  Widget page;
+  switch (settings.name) {
+    case HomeScreen.routeName:
+      page = const HomeScreen();
+      break;
+    case SettingsScreen.routeName:
+      page = const SettingsScreen();
+      break;
+    case LobbyScreen.routeName:
+      page = const LobbyScreen();
+      break;
+    case AliasScreen.routeName:
+      page = const AliasScreen();
+      break;
+    case AvatarScreen.routeName:
+      page = const AvatarScreen();
+      break;
+    case CreateRoomScreen.routeName:
+      page = const CreateRoomScreen();
+      break;
+    case DayClueScreen.routeName:
+      page = const DayClueScreen();
+      break;
+    case GameOverScreen.routeName:
+      page = const GameOverScreen();
+      break;
+    case GameRoomsScreen.routeName:
+      page = const GameRoomsScreen();
+      break;
+    case NightActionScreen.routeName:
+      page = const NightActionScreen();
+      break;
+    case RoleScreen.routeName:
+      page = const RoleScreen();
+      break;
+    case RoundResultScreen.routeName:
+      page = const RoundResultScreen();
+      break;
+    case VoteScreen.routeName:
+      page = const VoteScreen();
+      break;
+    case CustomizeAvatarScreen.routeName:
+      final args = settings.arguments as Map<String, dynamic>?;
+      page = CustomizeAvatarScreen(
+        characterFile: args?['characterFile'] ?? 'robot.glb',
+      );
+      break;
+    default:
+      page = const Scaffold(body: Center(child: Text('Page not found')));
+      break;
+  }
+  return MaterialPageRoute(builder: (_) => page, settings: settings);
 }
