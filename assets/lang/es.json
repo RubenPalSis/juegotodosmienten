@@ -1,4 +1,3 @@
-
 {
   "app_title": "Todos Mienten",
   "create_room": "Crear Sala",
@@ -19,5 +18,18 @@
   "game_has_ended": "¡El juego ha terminado!",
   "winners": "Ganadores: [EQUIPO]",
   "back_to_home": "Volver al Inicio",
-  "character_catalog_title": "Catálogo de Personajes"
+  "character_catalog_title": "Catálogo de Personajes",
+
+  "language_spanish": "Español",
+  "language_english": "Inglés",
+  "settings_title": "Ajustes",
+  "settings_changes_saved": "Cambios guardados correctamente",
+  "settings_section_theme": "Tema",
+  "settings_section_language": "Idioma",
+  "settings_section_user_profile": "Perfil de Usuario",
+  "settings_label_alias": "Alias",
+  "settings_label_level": "Nivel",
+  "settings_label_total_exp": "Experiencia Total",
+  "settings_label_dark_mode": "Modo Oscuro",
+  "settings_button_save": "Guardar Cambios"
 }

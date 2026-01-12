@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../services/user_service.dart';
+import '../services/firestore_service.dart';
+import '../services/language_service.dart';
 
 class AliasCreationDialog extends StatefulWidget {
   const AliasCreationDialog({super.key});
@@ -18,31 +20,55 @@ class _AliasCreationDialogState extends State<AliasCreationDialog> {
   bool _isLoading = false;
 
   Future<void> _submitAlias() async {
-    // Unfocus the text field to hide the keyboard
     _focusNode.unfocus();
-
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isLoading = true);
 
+    final alias = _aliasController.text.trim();
+    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final langService = Provider.of<LanguageService>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+
     try {
-      final userService = Provider.of<UserService>(context, listen: false);
-      // Sign in anonymously to get a uid
+      // Step 1: Sign in anonymously to get a user ID.
       final userCredential = await FirebaseAuth.instance.signInAnonymously();
       final uid = userCredential.user?.uid;
 
-      if (uid != null) {
-        await userService.createUser(_aliasController.text.trim(), uid);
+      if (uid == null) {
+        throw Exception('No se pudo obtener un ID de usuario.');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al crear el usuario: $e')),
+
+      // Step 2: Now that we are authenticated, check if the alias is taken.
+      final isTaken = await firestoreService.isAliasTaken(alias);
+      if (isTaken) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Este alias ya está en uso. Por favor, elige otro.')),
         );
+        // Optional: Sign out the anonymous user if the alias is taken and you want to keep things clean.
+        // await FirebaseAuth.instance.signOut();
+        setState(() => _isLoading = false);
+        return;
       }
+
+      // Step 3: If the alias is free, create the profiles.
+      await firestoreService.createUserProfile(
+        alias: alias,
+        uid: uid,
+        language: langService.appLocale.languageCode,
+      );
+
+      final userService = Provider.of<UserService>(context, listen: false);
+      await userService.createUser(alias, uid);
+
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Error al crear el usuario: $e')),
+      );
     } finally {
-      // The loading state will be handled by the parent consumer
-      // so no need to setState here.
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -56,10 +82,8 @@ class _AliasCreationDialogState extends State<AliasCreationDialog> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Allow unfocusing by tapping outside the text field
       onTap: () => _focusNode.unfocus(),
       child: Scaffold(
-        // Using a Scaffold to provide a better structure
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Center(
           child: SingleChildScrollView(

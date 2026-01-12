@@ -19,10 +19,13 @@ class ThemeService with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleTheme() async {
-    _themeMode = _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  Future<void> setTheme(ThemeMode newThemeMode) async {
+    if (newThemeMode == _themeMode) return;
+
+    _themeMode = newThemeMode;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_themeModeKey, _themeMode.index);
+    // The UI will be updated by the consumer in the MaterialApp
     notifyListeners();
   }
 }
@@ -83,7 +86,6 @@ class AppTheme {
           color: agedWhite,
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          fontFamily: 'Roboto',
         ),
       ),
 
@@ -94,19 +96,16 @@ class AppTheme {
           color: agedWhite,
           fontSize: 32,
           fontWeight: FontWeight.w900,
-          fontFamily: 'Roboto',
         ),
         displayMedium: TextStyle(
           color: agedWhite,
           fontSize: 28,
           fontWeight: FontWeight.w800,
-          fontFamily: 'Roboto',
         ),
         displaySmall: TextStyle(
           color: agedWhite,
           fontSize: 24,
           fontWeight: FontWeight.w700,
-          fontFamily: 'Roboto',
         ),
 
         // Titles
@@ -114,19 +113,16 @@ class AppTheme {
           color: agedWhite,
           fontSize: 22,
           fontWeight: FontWeight.w700,
-          fontFamily: 'Roboto',
         ),
         titleMedium: TextStyle(
           color: agedWhite,
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          fontFamily: 'Roboto',
         ),
         titleSmall: TextStyle(
           color: agedWhite,
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          fontFamily: 'Roboto',
         ),
 
         // Body
@@ -134,21 +130,18 @@ class AppTheme {
           color: agedWhite,
           fontSize: 16,
           fontWeight: FontWeight.w400,
-          fontFamily: 'Roboto',
           height: 1.5,
         ),
         bodyMedium: TextStyle(
           color: agedWhite,
           fontSize: 14,
           fontWeight: FontWeight.w400,
-          fontFamily: 'Roboto',
           height: 1.4,
         ),
         bodySmall: TextStyle(
           color: metalGrey,
           fontSize: 12,
           fontWeight: FontWeight.w400,
-          fontFamily: 'Roboto',
         ),
 
         // Labels
@@ -156,21 +149,18 @@ class AppTheme {
           color: agedWhite,
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          fontFamily: 'Roboto',
         ),
         labelMedium: TextStyle(
           color: agedWhite,
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          fontFamily: 'Roboto',
         ),
         labelSmall: TextStyle(
           color: metalGrey,
           fontSize: 11,
           fontWeight: FontWeight.w500,
-          fontFamily: 'Roboto',
         ),
-      ).apply(fontFamily: 'Roboto'),
+      ),
 
       // Buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -183,7 +173,6 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            fontFamily: 'Roboto',
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -202,7 +191,6 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            fontFamily: 'Roboto',
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -218,7 +206,6 @@ class AppTheme {
           textStyle: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            fontFamily: 'Roboto',
             decoration: TextDecoration.underline,
           ),
         ),
@@ -288,13 +275,11 @@ class AppTheme {
           color: agedWhite,
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          fontFamily: 'Roboto',
         ),
         contentTextStyle: const TextStyle(
           color: agedWhite,
           fontSize: 16,
           fontWeight: FontWeight.w400,
-          fontFamily: 'Roboto',
         ),
       ),
 
@@ -313,7 +298,6 @@ class AppTheme {
           color: agedWhite,
           fontSize: 14,
           fontWeight: FontWeight.w500,
-          fontFamily: 'Roboto',
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

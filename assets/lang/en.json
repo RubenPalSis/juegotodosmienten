@@ -1,4 +1,3 @@
-
 {
   "app_title": "Todos Mienten",
   "create_room": "Create Room",
@@ -19,5 +18,18 @@
   "game_has_ended": "The game has ended!",
   "winners": "Winners: [TEAM]",
   "back_to_home": "Back to Home",
-  "character_catalog_title": "Character Catalog"
+  "character_catalog_title": "Character Catalog",
+
+  "language_spanish": "Spanish",
+  "language_english": "English",
+  "settings_title": "Settings",
+  "settings_changes_saved": "Changes saved successfully",
+  "settings_section_theme": "Theme",
+  "settings_section_language": "Language",
+  "settings_section_user_profile": "User Profile",
+  "settings_label_alias": "Alias",
+  "settings_label_level": "Level",
+  "settings_label_total_exp": "Total Experience",
+  "settings_label_dark_mode": "Dark Mode",
+  "settings_button_save": "Save Changes"
 }

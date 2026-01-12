@@ -7,7 +7,7 @@ import '../services/character_service.dart';
 import '../services/navigation_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/customize_avatar_screen.dart';
-import '../screens/lobby_screen.dart';
+import '../screens/game_rooms_screen.dart'; // Correct import
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -102,7 +102,7 @@ class PlayScreen extends StatelessWidget {
               Text('${expInCurrentLevel.toInt()} / ${expForNextLevel.toInt()} EXP'),
               const SizedBox(height: 48),
               ElevatedButton(
-                onPressed: () => NavigationService.push(LobbyScreen.routeName),
+                onPressed: () => NavigationService.push(GameRoomsScreen.routeName), // Correct navigation
                 child: const Text('Buscar Partida'),
               )
             ],

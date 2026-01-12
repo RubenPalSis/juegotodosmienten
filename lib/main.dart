@@ -23,6 +23,7 @@ import 'screens/vote_screen.dart';
 // Import all services
 import 'services/app_localizations.dart';
 import 'services/character_service.dart';
+import 'services/firestore_service.dart'; // Import FirestoreService
 import 'services/language_service.dart';
 import 'services/navigation_service.dart';
 import 'services/theme_service.dart';
@@ -45,6 +46,7 @@ class TodosMientenApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider(create: (_) => FirestoreService()), // Add FirestoreService to providers
         Provider(create: (_) => CharacterService()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
@@ -80,7 +82,7 @@ class FirebaseInitializer extends StatefulWidget {
 }
 
 class _FirebaseInitializerState extends State<FirebaseInitializer> {
-  Future<FirebaseApp>? _initialization;
+  late final Future<void> _initialization;
 
   @override
   void initState() {
@@ -89,11 +91,16 @@ class _FirebaseInitializerState extends State<FirebaseInitializer> {
   }
 
   // This is the definitive way to initialize Firebase safely.
-  Future<FirebaseApp> _initializeFirebase() async {
-    if (Firebase.apps.isNotEmpty) {
-      return Firebase.app(); // Use existing app
+  Future<void> _initializeFirebase() async {
+    try {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    } on FirebaseException catch (e) {
+      // If the app is already initialized, we can safely ignore the error.
+      if (e.code != 'duplicate-app') {
+        // If it's a different error, rethrow it so we can see it.
+        rethrow;
+      }
     }
-    return Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
 
   @override
@@ -101,7 +108,7 @@ class _FirebaseInitializerState extends State<FirebaseInitializer> {
     return FutureBuilder(
       future: _initialization,
       builder: (context, snapshot) {
-        // Check for errors
+        // Check for errors (that are not 'duplicate-app')
         if (snapshot.hasError) {
           return Scaffold(
             body: Center(
@@ -137,38 +144,11 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
     case SettingsScreen.routeName:
       page = const SettingsScreen();
       break;
-    case LobbyScreen.routeName:
-      page = const LobbyScreen();
-      break;
     case AliasScreen.routeName:
       page = const AliasScreen();
       break;
     case AvatarScreen.routeName:
       page = const AvatarScreen();
-      break;
-    case CreateRoomScreen.routeName:
-      page = const CreateRoomScreen();
-      break;
-    case DayClueScreen.routeName:
-      page = const DayClueScreen();
-      break;
-    case GameOverScreen.routeName:
-      page = const GameOverScreen();
-      break;
-    case GameRoomsScreen.routeName:
-      page = const GameRoomsScreen();
-      break;
-    case NightActionScreen.routeName:
-      page = const NightActionScreen();
-      break;
-    case RoleScreen.routeName:
-      page = const RoleScreen();
-      break;
-    case RoundResultScreen.routeName:
-      page = const RoundResultScreen();
-      break;
-    case VoteScreen.routeName:
-      page = const VoteScreen();
       break;
     case CustomizeAvatarScreen.routeName:
       final args = settings.arguments as Map<String, dynamic>?;
@@ -176,9 +156,35 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
         characterFile: args?['characterFile'] ?? 'robot.glb',
       );
       break;
+    // Game-related routes are now handled in a separate function
     default:
-      page = const Scaffold(body: Center(child: Text('Page not found')));
+      page = _getGameRoutes(settings);
       break;
   }
   return MaterialPageRoute(builder: (_) => page, settings: settings);
+}
+
+Widget _getGameRoutes(RouteSettings settings) {
+  switch (settings.name) {
+    case GameRoomsScreen.routeName:
+      return const GameRoomsScreen();
+    case CreateRoomScreen.routeName:
+      return const CreateRoomScreen();
+    case LobbyScreen.routeName:
+      return const LobbyScreen();
+    case RoleScreen.routeName:
+      return const RoleScreen();
+    case NightActionScreen.routeName:
+      return const NightActionScreen();
+    case DayClueScreen.routeName:
+      return const DayClueScreen();
+    case VoteScreen.routeName:
+      return const VoteScreen();
+    case RoundResultScreen.routeName:
+      return const RoundResultScreen();
+    case GameOverScreen.routeName:
+      return const GameOverScreen();
+    default:
+      return const Scaffold(body: Center(child: Text('Page not found')));
+  }
 }

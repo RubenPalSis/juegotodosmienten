@@ -25,6 +25,7 @@ class LanguageService with ChangeNotifier {
     _appLocale = newLocale;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_languageCodeKey, newLocale.languageCode);
-    notifyListeners();
+    // The UI will be updated by the consumer in the MaterialApp
+    notifyListeners(); 
   }
 }

@@ -1,11 +1,10 @@
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/firestore_service.dart';
-import '../services/navigation_service.dart';
 import '../services/user_service.dart';
+import '../services/navigation_service.dart';
 import 'create_room_screen.dart';
 import 'lobby_screen.dart';
 
@@ -22,7 +21,14 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
   final _roomCodeController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _joinRoomWithCode(BuildContext context, String roomCode) async {
+  @override
+  void initState() {
+    super.initState();
+    // Run cleanup when the screen is first built
+    Provider.of<FirestoreService>(context, listen: false).cleanupInactiveRooms();
+  }
+
+  Future<void> _joinRoom(String roomCode, {bool isPublic = false}) async {
     if (roomCode.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor, introduce un código de sala.')),
@@ -30,36 +36,34 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
       return;
     }
 
+    // If trying to join a private room from the list without a code
+    if (!isPublic) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Necesitas un código para entrar en una sala privada.')),
+        );
+        return;
+    }
+
     setState(() => _isLoading = true);
 
     final firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    final userService = Provider.of<UserService>(context, listen: false);
-    final user = userService.currentUser;
+    final user = Provider.of<UserService>(context, listen: false).currentUser;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Debes iniciar sesión para unirte a una sala.')),
-      );
       setState(() => _isLoading = false);
-      return;
+      return; // Should not happen
     }
 
     try {
-      final playerData = {
-        'uid': user.uid,
-        'alias': user.alias,
-      };
-      final success = await firestoreService.joinGameRoom(roomCode: roomCode, playerData: playerData);
-
+      final success = await firestoreService.joinGameRoom(
+        roomCode: roomCode,
+        playerData: {'uid': user.uid, 'alias': user.alias},
+      );
       if (success && mounted) {
         NavigationService.push(LobbyScreen.routeName, arguments: {'roomCode': roomCode});
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
-      }
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -80,90 +84,73 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildJoinWithCodeSection(context, isLoggedIn),
+            _buildJoinWithCodeSection(isLoggedIn),
             const SizedBox(height: 24),
-            const Text('Salas Públicas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('Salas Disponibles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const Divider(),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: firestoreService.getPublicRooms(),
+                stream: firestoreService.getAllRooms(), // Use the new method
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('No hay salas públicas disponibles.'));
+                    return const Center(child: Text('No hay salas disponibles.'));
                   }
-                  return ListView(children: snapshot.data!.docs.map((doc) => _buildRoomTile(context, doc, isLoggedIn)).toList());
+                  return ListView(children: snapshot.data!.docs.map((doc) => _buildRoomTile(doc, isLoggedIn)).toList());
                 },
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: isLoggedIn
-                  ? () {
-                      NavigationService.push(
-                        CreateRoomScreen.routeName,
-                        arguments: {
-                          'uid': user.uid,
-                          'userProfile': {'uid': user.uid, 'alias': user.alias}
-                        },
-                      );
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-              child: const Text('Crear Sala Nueva'),
             ),
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: isLoggedIn ? () => NavigationService.push(CreateRoomScreen.routeName) : null,
+        label: const Text('Crear Sala'),
+        icon: const Icon(Icons.add),
+      ),
     );
   }
 
-  Widget _buildJoinWithCodeSection(BuildContext context, bool isLoggedIn) {
+  Widget _buildJoinWithCodeSection(bool isLoggedIn) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
           controller: _roomCodeController,
           decoration: const InputDecoration(labelText: 'Código de la Sala', border: OutlineInputBorder()),
-          keyboardType: TextInputType.number,
           enabled: isLoggedIn,
         ),
         const SizedBox(height: 8),
         _isLoading
             ? const Center(child: CircularProgressIndicator())
             : ElevatedButton(
-                onPressed: isLoggedIn ? () => _joinRoomWithCode(context, _roomCodeController.text.trim()) : null,
+                onPressed: isLoggedIn ? () => _joinRoom(_roomCodeController.text.trim(), isPublic: true) : null, // Code entry is always a direct attempt
                 child: const Text('Unirse con Código'),
               ),
       ],
     );
   }
 
-  Widget _buildRoomTile(BuildContext context, DocumentSnapshot roomSnapshot, bool isLoggedIn) {
+  Widget _buildRoomTile(DocumentSnapshot roomSnapshot, bool isLoggedIn) {
     final room = roomSnapshot.data() as Map<String, dynamic>;
     final players = List<Map<String, dynamic>>.from(room['players'] ?? []);
-    final hostId = room['hostId'];
+    final isPublic = room['isPublic'] ?? false;
+    final isFull = players.length >= room['maxPlayers'];
 
-    String hostAlias = 'Anfitrión'; // Default name
-    if (hostId != null) {
-      final hostPlayer = players.firstWhere(
-        (p) => p['uid'] == hostId,
-        orElse: () => <String, dynamic>{}, // Return empty map if not found
-      );
-      if (hostPlayer.isNotEmpty) {
-        hostAlias = hostPlayer['alias'] ?? hostAlias;
-      }
-    }
+    IconData lockIcon = Icons.lock_open;
+    if (!isPublic) lockIcon = Icons.lock;
+    if (isFull) lockIcon = Icons.lock;
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
-        title: Text("Sala de $hostAlias"),
+        leading: Icon(lockIcon),
+        title: Text("Sala de ${room['hostId']}"), // Placeholder for host alias
         subtitle: Text('Jugadores: ${players.length}/${room['maxPlayers']}'),
         trailing: ElevatedButton(
-          onPressed: isLoggedIn ? () => _joinRoomWithCode(context, room['roomCode']) : null,
+          onPressed: isLoggedIn && !isFull ? () => _joinRoom(room['roomCode'], isPublic: isPublic) : null,
           child: const Text('Unirse'),
         ),
       ),

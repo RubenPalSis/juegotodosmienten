@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../services/firestore_service.dart';
+import '../services/user_service.dart';
 import '../services/navigation_service.dart';
 import 'lobby_screen.dart';
 
@@ -18,32 +18,37 @@ class CreateRoomScreen extends StatefulWidget {
 class _CreateRoomScreenState extends State<CreateRoomScreen> {
   bool _isLoading = false;
   int _maxPlayers = 8;
+  bool _isPublic = true;
 
-  Future<void> _createRoom(BuildContext context) async {
+  Future<void> _createAndJoinRoom() async {
     setState(() => _isLoading = true);
 
     final firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final userProfile = arguments['userProfile'] as Map<String, dynamic>;
-    final uid = arguments['uid'] as String;
+    final user = Provider.of<UserService>(context, listen: false).currentUser;
+
+    if (user == null) {
+      // This should ideally not happen if the UI is built correctly
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: Usuario no encontrado')),
+      );
+      return;
+    }
 
     try {
       final roomCode = await firestoreService.createRoom(
-        hostId: uid,
-        hostData: userProfile,
+        hostId: user.uid,
+        hostData: {'uid': user.uid, 'alias': user.alias},
         maxPlayers: _maxPlayers,
+        isPublic: _isPublic,
       );
-      if (mounted) {
-        NavigationService.pushReplacementNamed(LobbyScreen.routeName, arguments: {'roomCode': roomCode});
-      }
+      // Navigate to the lobby for the newly created room
+      NavigationService.pushReplacementNamed(LobbyScreen.routeName, arguments: {'roomCode': roomCode});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al crear la sala: $e')),
         );
-      }
-    } finally {
-      if (mounted) {
         setState(() => _isLoading = false);
       }
     }
@@ -53,51 +58,65 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Crear Sala'),
+        title: const Text('Crear Sala de Juego'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Configura tu sala',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 30),
-            DropdownButtonFormField<int>(
-              initialValue: _maxPlayers,
-              decoration: const InputDecoration(
-                labelText: 'Jugadores Máximos',
-                border: OutlineInputBorder(),
-              ),
-              items: [6, 8, 10, 12].map((int value) {
-                return DropdownMenuItem<int>(
-                  value: value,
-                  child: Text(value.toString()),
-                );
-              }).toList(),
-              onChanged: (int? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _maxPlayers = newValue;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 16),
+            // Max Players Selector
+            _buildDropdown(),
+            const SizedBox(height: 24),
+            // Public/Private Switch
+            _buildSwitch(),
+            const Spacer(),
+            // Create Button
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : ElevatedButton(
-                    onPressed: () => _createRoom(context),
+                    onPressed: _createAndJoinRoom,
                     style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                    child: const Text('Crear y Unirse a la Sala'),
+                    child: const Text('Crear y Entrar'),
                   ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDropdown() {
+    return DropdownButtonFormField<int>(
+      initialValue: _maxPlayers,
+      decoration: const InputDecoration(
+        labelText: 'Número Máximo de Jugadores',
+        border: OutlineInputBorder(),
+      ),
+      items: [6, 8, 10, 12].map((int value) {
+        return DropdownMenuItem<int>(
+          value: value,
+          child: Text('$value jugadores'),
+        );
+      }).toList(),
+      onChanged: (newValue) {
+        if (newValue != null) {
+          setState(() => _maxPlayers = newValue);
+        }
+      },
+    );
+  }
+
+  Widget _buildSwitch() {
+    return SwitchListTile.adaptive(
+      title: const Text('Sala Pública'),
+      subtitle: const Text('Si está activado, otros podrán ver y unirse a tu sala.'),
+      value: _isPublic,
+      onChanged: (newValue) {
+        setState(() => _isPublic = newValue);
+      },
+      contentPadding: const EdgeInsets.all(0),
     );
   }
 }
