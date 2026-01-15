@@ -91,9 +91,12 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return const Center(child: Text('No hay salas disponibles.'));
                   }
-                  return ListView(
-                    children: snapshot.data!.docs.map((doc) => _buildRoomTile(doc, isLoggedIn)).toList(),
-                  );
+                  return ListView.builder(
+                      itemCount: snapshot.data!.docs.length,
+                      itemBuilder: (context, index) {
+                        final doc = snapshot.data!.docs[index];
+                        return _buildRoomTile(doc, isLoggedIn);
+                      });
                 },
               ),
             ),

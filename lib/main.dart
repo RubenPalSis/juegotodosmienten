@@ -130,32 +130,24 @@ class FirebaseInitializer extends StatefulWidget {
 }
 
 class _FirebaseInitializerState extends State<FirebaseInitializer> {
-  late final Future<FirebaseApp?> _initialization;
-
-  @override
-  void initState() {
-    super.initState();
-    _initialization = _initializeFirebase();
-  }
-
   Future<FirebaseApp?> _initializeFirebase() async {
     try {
       return await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } on FirebaseException catch (e) {
       if (e.code == 'duplicate-app') {
-        return Firebase.app(); // Use existing app
+        return Firebase.app();
       }
-      rethrow; // Rethrow other Firebase errors
+      rethrow;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: _initialization,
+      future: _initializeFirebase(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Scaffold(body: Center(child: Text("Error: ${snapshot.error}")));
+          return Scaffold(body: Center(child: Text("Error al inicializar Firebase: ${snapshot.error}")));
         }
         if (snapshot.connectionState == ConnectionState.done) {
           return const HomeScreen();
@@ -200,32 +192,33 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       page = const AliasRedirectScreen();
       break;
     case CustomizeAvatarScreen.routeName:
-       final args = settings.arguments as Map<String, dynamic>?;
-       page = CustomizeAvatarScreen(characterFile: args?['characterFile'] ?? 'robot.glb');
-       break;
+      final args = settings.arguments as Map<String, dynamic>?;
+      page = CustomizeAvatarScreen(characterFile: args?['characterFile'] ?? 'robot.glb');
+      break;
     case DayClueScreen.routeName:
-       page = const DayClueScreen();
-       break;
+      page = const DayClueScreen();
+      break;
     case GameOverScreen.routeName:
-       page = const GameOverScreen();
-       break;
+      page = const GameOverScreen();
+      break;
     case NightActionScreen.routeName:
-       page = const NightActionScreen();
-       break;
+      page = const NightActionScreen();
+      break;
     case RoleScreen.routeName:
-       page = const RoleScreen();
-       break;
+      page = const RoleScreen();
+      break;
     case RoundResultScreen.routeName:
-       page = const RoundResultScreen();
-       break;
+      page = const RoundResultScreen();
+      break;
     case VoteScreen.routeName:
-       page = const VoteScreen();
-       break;
+      page = const VoteScreen();
+      break;
     case AliasScreen.routeName:
-       page = const AliasScreen();
-       break;
+      page = const AliasScreen();
+      break;
     default:
       page = const Scaffold(body: Center(child: Text('Page not found')));
+      break;
   }
   return MaterialPageRoute(builder: (_) => page, settings: settings);
 }
