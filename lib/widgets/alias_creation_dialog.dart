@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/user_service.dart';
 import '../services/firestore_service.dart';
 import '../services/language_service.dart';
+import '../services/profanity_filter_service.dart'; // Import the new service
 
 class AliasCreationDialog extends StatefulWidget {
   const AliasCreationDialog({super.key});
@@ -26,12 +27,22 @@ class _AliasCreationDialogState extends State<AliasCreationDialog> {
     setState(() => _isLoading = true);
 
     final alias = _aliasController.text.trim();
+    final profanityFilter = Provider.of<ProfanityFilterService>(context, listen: false);
     final firestoreService = Provider.of<FirestoreService>(context, listen: false);
     final langService = Provider.of<LanguageService>(context, listen: false);
     final messenger = ScaffoldMessenger.of(context);
 
+    // Step 1: Check for profanity first
+    if (profanityFilter.isProfane(alias)) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Este nombre no está permitido. Por favor, elige otro.')),
+      );
+      setState(() => _isLoading = false);
+      return;
+    }
+
     try {
-      // Step 1: Sign in anonymously to get a user ID.
+      // Step 2: Sign in anonymously to get a user ID.
       final userCredential = await FirebaseAuth.instance.signInAnonymously();
       final uid = userCredential.user?.uid;
 
@@ -39,19 +50,17 @@ class _AliasCreationDialogState extends State<AliasCreationDialog> {
         throw Exception('No se pudo obtener un ID de usuario.');
       }
 
-      // Step 2: Now that we are authenticated, check if the alias is taken.
+      // Step 3: Now that we are authenticated, check if the alias is taken.
       final isTaken = await firestoreService.isAliasTaken(alias);
       if (isTaken) {
         messenger.showSnackBar(
           const SnackBar(content: Text('Este alias ya está en uso. Por favor, elige otro.')),
         );
-        // Optional: Sign out the anonymous user if the alias is taken and you want to keep things clean.
-        // await FirebaseAuth.instance.signOut();
         setState(() => _isLoading = false);
         return;
       }
 
-      // Step 3: If the alias is free, create the profiles.
+      // Step 4: If the alias is free and clean, create the profiles.
       await firestoreService.createUserProfile(
         alias: alias,
         uid: uid,

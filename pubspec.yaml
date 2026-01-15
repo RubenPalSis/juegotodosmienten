@@ -11,21 +11,26 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Updated Firebase dependencies to the LATEST STABLE & COMPATIBLE versions
+  # Firebase
   firebase_core: ^2.32.0
   firebase_auth: ^4.20.0
   cloud_firestore: ^4.17.5
 
+  # State Management & Services
+  provider: ^6.0.0
+  shared_preferences: ^2.2.3
+
+  # UI & Utilities
   cupertino_icons: ^1.0.8
   flutter_localizations:
     sdk: flutter
   model_viewer_plus: ^1.7.0
-  provider: ^6.0.0
-  shared_preferences: ^2.2.3
-
-  # SQLite dependencies
   sqflite: ^2.3.0
   path: ^1.8.3
+
+  # Sharing & Deep Linking
+  share_plus: ^9.0.0
+  app_links: ^3.4.1
 
 dev_dependencies:
   flutter_test:
@@ -33,7 +38,6 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   flutter_native_splash: ^2.4.0
 
-  firebase_core_platform_interface: any
 flutter_native_splash:
   color: "#0E0E0E"
   image: assets/img/logo.png
@@ -45,5 +49,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/lang/
+    - assets/lang/profanity_filter.json # Added profanity filter
     - assets/models/
     - assets/img/

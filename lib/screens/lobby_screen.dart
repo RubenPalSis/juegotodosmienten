@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../services/firestore_service.dart';
 import '../services/user_service.dart';
@@ -16,6 +17,7 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen> {
   String? _roomCode;
+  final _chatController = TextEditingController();
 
   @override
   void didChangeDependencies() {
@@ -33,94 +35,316 @@ class _LobbyScreenState extends State<LobbyScreen> {
     }
   }
 
+  void _shareInvitation() {
+    if (_roomCode == null) return;
+    final invitationLink = "https://todosmienten.app/join?room=$_roomCode";
+    final message = "¡Únete a mi partida en Todos Mienten!\n\nCódigo: $_roomCode\nO usa este enlace para unirte directamente: $invitationLink";
+    Share.share(message);
+  }
+
+  Future<void> _sendMessage() async {
+    if (_chatController.text.trim().isEmpty) return;
+
+    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final user = Provider.of<UserService>(context, listen: false).currentUser;
+    final roomSnapshot = await firestoreService.getGameRoomStream(_roomCode!).first;
+    final roomData = roomSnapshot.data() as Map<String, dynamic>?;
+    final players = roomData?['players'] as List<dynamic>? ?? [];
+    final currentPlayer = players.firstWhere((p) => p['uid'] == user?.uid, orElse: () => null);
+
+    if (user != null && currentPlayer != null) {
+      await firestoreService.sendMessage(
+        roomCode: _roomCode!,
+        text: _chatController.text.trim(),
+        alias: user.alias,
+        uid: user.uid,
+        color: currentPlayer['color'],
+      );
+      _chatController.clear();
+    }
+  }
+
   @override
   void dispose() {
     _leaveRoom();
+    _chatController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final firestoreService = Provider.of<FirestoreService>(context);
+    final currentUser = Provider.of<UserService>(context, listen: false).currentUser;
 
     if (_roomCode == null) {
       return const Scaffold(body: Center(child: Text('Error: Código de sala no encontrado.')));
     }
 
-    return WillPopScope(
-      onWillPop: () async {
-        await _leaveRoom();
-        return true;
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Sala de Espera'),
-        ),
-        body: StreamBuilder<DocumentSnapshot>(
-          stream: firestoreService.getGameRoomStream(_roomCode!),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+    return StreamBuilder<DocumentSnapshot>(
+      stream: firestoreService.getGameRoomStream(_roomCode!),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        final roomData = snapshot.data!.data() as Map<String, dynamic>?;
+        if (roomData == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('La sala ha sido cerrada por el anfitrión o por inactividad.')),
+              );
             }
+          });
+          return const Scaffold(body: Center(child: Text('La sala ha sido cerrada.')));
+        }
 
-            final roomData = snapshot.data!.data() as Map<String, dynamic>?;
-            if (roomData == null) {
-              // The room may have been deleted by the host
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if(mounted) Navigator.of(context).pop();
-              });
-              return const Center(child: Text('La sala ha sido cerrada.'));
-            }
+        final isHost = roomData['hostId'] == currentUser?.uid;
+        final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
+        final allReady = players.every((p) => p['isReady'] == true);
 
-            final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
-
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  _buildRoomCodeDisplay(),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Jugadores (${players.length}/${roomData['maxPlayers']})',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Divider(),
-                  _buildPlayerList(players),
+        return DefaultTabController(
+          length: isHost ? 3 : 2,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Sala de Espera'),
+              bottom: TabBar(
+                tabs: [
+                  const Tab(text: 'Jugadores'),
+                  const Tab(text: 'Chat'),
+                  if (isHost) const Tab(text: 'Configuración'),
                 ],
               ),
-            );
-          },
-        ),
+            ),
+            body: Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildPlayersTab(roomData, currentUser?.uid ?? ''),
+                      _buildChatTab(currentUser?.uid ?? ''),
+                      if (isHost) _buildSettingsTab(roomData),
+                    ],
+                  ),
+                ),
+                if (isHost && allReady)
+                  _buildStartGameButton(),
+                if(!isHost)
+                  _buildReadyButton(players.firstWhere((p) => p['uid'] == currentUser?.uid, orElse: () => {})['isReady'] ?? false),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          const Text('Código de la Sala:', style: TextStyle(fontSize: 18)),
+          SelectableText(_roomCode!, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _shareInvitation,
+            icon: const Icon(Icons.share),
+            label: const Text('Invitar a Amigos'),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildRoomCodeDisplay() {
+  Widget _buildPlayersTab(Map<String, dynamic> roomData, String currentUserId) {
+    final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
+    return ListView.builder(
+      itemCount: players.length,
+      itemBuilder: (context, index) {
+        final player = players[index];
+        final isCurrentUser = player['uid'] == currentUserId;
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: ListTile(
+            onTap: isCurrentUser ? () => _showColorPicker(context, players, currentUserId) : null,
+            leading: CircleAvatar(backgroundColor: Color(int.parse(player['color'].substring(1, 7), radix: 16) + 0xFF000000)),
+            title: Text(player['alias'] ?? 'Jugador Desconocido'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (player['isReady'] == true) const Icon(Icons.check_circle, color: Colors.green),
+                if (roomData['hostId'] == player['uid']) const Icon(Icons.star, color: Colors.amber),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildChatTab(String currentUserId) {
     return Column(
       children: [
-        const Text('Código de la Sala:', style: TextStyle(fontSize: 18)),
-        SelectableText(
-          _roomCode!,
-          style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: Provider.of<FirestoreService>(context).getChatStream(_roomCode!),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              final messages = snapshot.data!.docs;
+              return ListView.builder(
+                reverse: true,
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final message = messages[index].data() as Map<String, dynamic>;
+                  final bool isMe = message['uid'] == currentUserId;
+                  return _buildChatMessage(message, isMe);
+                },
+              );
+            },
+          ),
+        ),
+        _buildChatInput(),
+      ],
+    );
+  }
+
+  Widget _buildSettingsTab(Map<String, dynamic> roomData) {
+    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        SwitchListTile.adaptive(
+          title: const Text('Sala Pública'),
+          value: roomData['isPublic'],
+          onChanged: (value) => firestoreService.updateRoomSettings(_roomCode!, isPublic: value),
+        ),
+        DropdownButtonFormField<int>(
+          value: roomData['maxPlayers'],
+          decoration: const InputDecoration(labelText: 'Jugadores Máximos'),
+          items: [6, 8, 10, 12].map((value) => DropdownMenuItem(value: value, child: Text('$value jugadores'))).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              firestoreService.updateRoomSettings(_roomCode!, maxPlayers: value);
+            }
+          },
         ),
       ],
     );
   }
 
-  Widget _buildPlayerList(List<Map<String, dynamic>> players) {
-    return Expanded(
-      child: ListView.builder(
-        itemCount: players.length,
-        itemBuilder: (context, index) {
-          final player = players[index];
-          return Card(
-            child: ListTile(
-              leading: CircleAvatar(backgroundColor: Color(int.parse(player['color'].substring(1, 7), radix: 16) + 0xFF000000)),
-              title: Text(player['alias'] ?? 'Jugador Desconocido'),
+  Widget _buildChatMessage(Map<String, dynamic> message, bool isMe) {
+    final color = Color(int.parse(message['color'].substring(1, 7), radix: 16) + 0xFF000000);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isMe ? Theme.of(context).colorScheme.primary.withOpacity(0.2) : Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
             ),
-          );
-        },
+            child: RichText(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.bodyMedium,
+                children: [
+                  TextSpan(
+                    text: '${message['alias']}: ', 
+                    style: TextStyle(fontWeight: FontWeight.bold, color: color),
+                  ),
+                  TextSpan(text: message['text']),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildChatInput() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _chatController,
+              decoration: const InputDecoration(hintText: 'Escribe un mensaje...', border: OutlineInputBorder()),
+              onSubmitted: (_) => _sendMessage(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.send), 
+            onPressed: _sendMessage,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadyButton(bool isReady) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ElevatedButton(
+        onPressed: isReady ? null : () => Provider.of<FirestoreService>(context, listen: false).togglePlayerReadyState(_roomCode!, Provider.of<UserService>(context, listen: false).currentUser!.uid),
+        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: isReady ? Colors.grey : null),
+        child: Text(isReady ? 'Esperando...' : '¿Preparado?'),
+      ),
+    );
+  }
+
+  Widget _buildStartGameButton() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ElevatedButton(
+        onPressed: () => Provider.of<FirestoreService>(context, listen: false).startGame(_roomCode!),
+        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: Colors.green),
+        child: const Text('¡Empezar Partida!'),
+      ),
+    );
+  }
+
+  void _showColorPicker(BuildContext context, List<Map<String, dynamic>> players, String currentUserId) {
+    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final usedColors = players.map((p) => p['color']).toSet();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Elige tu color'),
+          content: Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: firestoreService.availableColors.map((colorHex) {
+              final color = Color(int.parse(colorHex.substring(1, 7), radix: 16) + 0xFF000000);
+              final isUsed = usedColors.contains(colorHex);
+              return GestureDetector(
+                onTap: () async {
+                  if (isUsed) return;
+                  try {
+                    await firestoreService.changePlayerColor(_roomCode!, currentUserId, colorHex);
+                    Navigator.of(context).pop();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                },
+                child: CircleAvatar(
+                  backgroundColor: color,
+                  child: isUsed ? const Icon(Icons.close, color: Colors.red) : null,
+                ),
+              );
+            }).toList(),
+          ),
+          actions: [TextButton(child: const Text('Cerrar'), onPressed: () => Navigator.of(context).pop())],
+        );
+      },
     );
   }
 }

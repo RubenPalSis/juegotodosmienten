@@ -1,4 +1,3 @@
-
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -37,10 +36,39 @@ class FirestoreService {
     final docRef = _db.collection('aliases').doc(alias);
     await docRef.update({
       'language': newLanguage,
-      'lastAccess': FieldValue.serverTimestamp(), // Also update last access time
+      'lastAccess': FieldValue.serverTimestamp(),
     });
   }
 
+  Future<void> addXpToPlayer(String uid, int xp) async {
+    final query = await _db.collection('aliases').where('uid', isEqualTo: uid).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      final docRef = query.docs.first.reference;
+      await docRef.update({'totalExp': FieldValue.increment(xp)});
+    }
+  }
+
+  // --- Chat Methods ---
+
+  Stream<QuerySnapshot> getChatStream(String roomCode) {
+    return _db.collection('rooms').doc(roomCode).collection('messages').orderBy('timestamp', descending: true).limit(50).snapshots();
+  }
+
+  Future<void> sendMessage({
+    required String roomCode,
+    required String text,
+    required String alias,
+    required String uid,
+    required String color,
+  }) async {
+    await _db.collection('rooms').doc(roomCode).collection('messages').add({
+      'text': text,
+      'alias': alias,
+      'uid': uid,
+      'color': color,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+  }
 
   // --- Game Room Methods ---
 
@@ -73,8 +101,8 @@ class FirestoreService {
     final roomCode = await _generateUniqueRoomCode();
     final roomRef = _db.collection('rooms').doc(roomCode);
 
-    final randomColor = availableColors[Random().nextInt(availableColors.length)];
-    hostData['color'] = randomColor;
+    hostData['color'] = availableColors[Random().nextInt(availableColors.length)];
+    hostData['isReady'] = false;
 
     await roomRef.set({
       'roomCode': roomCode,
@@ -84,7 +112,6 @@ class FirestoreService {
       'players': [hostData],
       'createdAt': FieldValue.serverTimestamp(),
       'status': 'waiting',
-      'emptyAt': null, // Initialize emptyAt field
     });
 
     return roomCode;
@@ -97,29 +124,21 @@ class FirestoreService {
     final roomRef = _db.collection('rooms').doc(roomCode);
     final doc = await roomRef.get();
 
-    if (!doc.exists) {
-      throw 'La sala no existe o el código es incorrecto.';
-    }
+    if (!doc.exists) throw 'La sala no existe o el código es incorrecto.';
 
     final roomData = doc.data()!;
     final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
 
-    if (players.length >= roomData['maxPlayers']) {
-      throw 'La sala ya está llena.';
-    }
-
-    if (players.any((p) => p['uid'] == playerData['uid'])) {
-      return true; // Already in the room
-    }
+    if (players.length >= roomData['maxPlayers']) throw 'La sala ya está llena.';
+    if (players.any((p) => p['uid'] == playerData['uid'])) return true;
 
     final usedColors = players.map((p) => p['color']).whereType<String>().toSet();
     final available = availableColors.where((c) => !usedColors.contains(c)).toList();
     playerData['color'] = available.isEmpty ? availableColors[Random().nextInt(availableColors.length)] : available.first;
+    playerData['isReady'] = false;
 
-    // When a player joins, cancel the deletion timer by setting emptyAt to null.
     await roomRef.update({
       'players': FieldValue.arrayUnion([playerData]),
-      'emptyAt': null,
     });
 
     return true;
@@ -134,39 +153,79 @@ class FirestoreService {
 
     if (doc.exists) {
       final roomData = doc.data()!;
-      final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
-
       if (roomData['hostId'] == userId) {
-        await roomRef.delete(); // Host leaves, room is deleted instantly
+        await roomRef.delete();
       } else {
+        final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
         players.removeWhere((p) => p['uid'] == userId);
-        if (players.isEmpty) {
-          // If the last player leaves, set a timestamp to delete the room later.
-          await roomRef.update({
-            'players': [],
-            'emptyAt': FieldValue.serverTimestamp(),
-          });
-        } else {
-          await roomRef.update({'players': players});
-        }
+        
+        FieldValue? emptyAtValue = (players.isEmpty) ? FieldValue.serverTimestamp() : null;
+
+        await roomRef.update({'players': players, 'emptyAt': emptyAtValue});
       }
     }
   }
 
-  Future<void> cleanupInactiveRooms() async {
-    final fifteenSecondsAgo = Timestamp.fromMillisecondsSinceEpoch(
-      DateTime.now().subtract(const Duration(seconds: 15)).millisecondsSinceEpoch,
-    );
+  Future<void> togglePlayerReadyState(String roomCode, String userId) async {
+    final roomRef = _db.collection('rooms').doc(roomCode);
+    final doc = await roomRef.get();
+    if (doc.exists) {
+      final players = List<Map<String, dynamic>>.from(doc.data()!['players'] ?? []);
+      final playerIndex = players.indexWhere((p) => p['uid'] == userId);
+      if (playerIndex != -1) {
+        players[playerIndex]['isReady'] = !players[playerIndex]['isReady'];
+        await roomRef.update({'players': players});
+      }
+    }
+  }
 
-    final snapshot = await _db
-        .collection('rooms')
-        .where('emptyAt', isLessThanOrEqualTo: fifteenSecondsAgo)
-        .get();
+  Future<void> startGame(String roomCode) async {
+    final roomRef = _db.collection('rooms').doc(roomCode);
+    final doc = await roomRef.get();
+    if(doc.exists) {
+      final players = List<Map<String, dynamic>>.from(doc.data()!['players'] ?? []);
+      final random = Random();
+      for (var player in players) {
+        await addXpToPlayer(player['uid'], random.nextInt(101));
+      }
+      await roomRef.delete();
+    }
+  }
+
+   Future<void> updateRoomSettings(String roomCode, {int? maxPlayers, bool? isPublic}) async {
+    final Map<String, dynamic> updates = {};
+    if (maxPlayers != null) updates['maxPlayers'] = maxPlayers;
+    if (isPublic != null) updates['isPublic'] = isPublic;
+
+    if (updates.isNotEmpty) {
+      await _db.collection('rooms').doc(roomCode).update(updates);
+    }
+  }
+
+  Future<void> cleanupInactiveRooms() async {
+    final now = Timestamp.now();
+    final fifteenSecondsAgo = Timestamp.fromMillisecondsSinceEpoch(now.millisecondsSinceEpoch - 15000);
+    final fiveMinutesAgo = Timestamp.fromMillisecondsSinceEpoch(now.millisecondsSinceEpoch - 300000);
+
+    final emptyRoomsQuery = _db.collection('rooms').where('emptyAt', isLessThanOrEqualTo: fifteenSecondsAgo);
+    final staleRoomsQuery = _db.collection('rooms').where('createdAt', isLessThanOrEqualTo: fiveMinutesAgo);
 
     final batch = _db.batch();
-    for (final doc in snapshot.docs) {
+
+    final emptyRoomsSnapshot = await emptyRoomsQuery.get();
+    for (final doc in emptyRoomsSnapshot.docs) {
       batch.delete(doc.reference);
     }
+
+    final staleRoomsSnapshot = await staleRoomsQuery.get();
+    for (final doc in staleRoomsSnapshot.docs) {
+      final data = doc.data();
+      final players = data['players'] as List<dynamic>? ?? [];
+      if (players.length == 1) {
+        batch.delete(doc.reference);
+      }
+    }
+
     await batch.commit();
   }
 
@@ -178,11 +237,7 @@ class FirestoreService {
     if (doc.exists) {
       final roomData = doc.data()!;
       final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
-      final otherPlayersColors = players
-          .where((p) => p['uid'] != userId)
-          .map((p) => p['color'])
-          .whereType<String>()
-          .toSet();
+      final otherPlayersColors = players.where((p) => p['uid'] != userId).map((p) => p['color']).whereType<String>().toSet();
 
       if (otherPlayersColors.contains(newColor)) {
         throw 'El color ya está en uso por otro jugador.';
