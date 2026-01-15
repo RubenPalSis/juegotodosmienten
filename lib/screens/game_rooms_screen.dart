@@ -153,7 +153,7 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
         title: Text("Sala de $hostAlias"),
         subtitle: Text('Jugadores: ${players.length}/${room['maxPlayers']}'),
         trailing: SizedBox(
-          width: 90,
+          width: 90, // Constrain button width
           child: ElevatedButton(
             onPressed: isLoggedIn && !isFull ? () => _joinRoom(room['roomCode'], isPublic: isPublic) : null,
             child: const Text('Unirse'),

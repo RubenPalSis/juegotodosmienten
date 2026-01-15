@@ -12,6 +12,14 @@ class FirestoreService {
 
   // --- User Profile Methods ---
 
+  Future<DocumentSnapshot?> getUserProfile(String uid) async {
+    final query = await _db.collection('aliases').where('uid', isEqualTo: uid).limit(1).get();
+    if (query.docs.isNotEmpty) {
+      return query.docs.first;
+    }
+    return null;
+  }
+
   Future<bool> isAliasTaken(String alias) async {
     final doc = await _db.collection('aliases').doc(alias).get();
     return doc.exists;
@@ -114,6 +122,7 @@ class FirestoreService {
       'players': [hostData],
       'createdAt': FieldValue.serverTimestamp(),
       'status': 'waiting',
+      'bannedUIDs': [], // Initialize banned list
     });
 
     return roomCode;
@@ -130,7 +139,9 @@ class FirestoreService {
 
     final roomData = doc.data()!;
     final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
+    final bannedUIDs = List<String>.from(roomData['bannedUIDs'] ?? []);
 
+    if (bannedUIDs.contains(playerData['uid'])) throw 'Has sido baneado de esta sala.';
     if (players.length >= roomData['maxPlayers']) throw 'La sala ya está llena.';
     if (players.any((p) => p['uid'] == playerData['uid'])) return true;
 
@@ -143,49 +154,52 @@ class FirestoreService {
       'players': FieldValue.arrayUnion([playerData]),
     });
     
-    await sendMessage(
-      roomCode: roomCode, 
-      text: 'se ha unido a la sala', 
-      alias: playerData['alias'], 
-      uid: playerData['uid'], 
-      color: playerData['color'], 
-      isEvent: true
-    );
+    await sendMessage(roomCode: roomCode, text: 'se ha unido a la sala', alias: playerData['alias'], uid: playerData['uid'], color: playerData['color'], isEvent: true);
 
     return true;
   }
 
-  Future<void> leaveGameRoom({
-    required String roomCode,
-    required String userId,
-  }) async {
+  Future<void> leaveGameRoom({ required String roomCode, required String userId }) async {
     final roomRef = _db.collection('rooms').doc(roomCode);
-    final doc = await roomRef.get();
+    await _db.runTransaction((transaction) async {
+      final doc = await transaction.get(roomRef);
+      if (!doc.exists) return;
 
-    if (doc.exists) {
       final roomData = doc.data()!;
       final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
       final playerLeaving = players.firstWhere((p) => p['uid'] == userId, orElse: () => {});
 
-      if(playerLeaving.isNotEmpty) {
-        await sendMessage(
-          roomCode: roomCode, 
-          text: 'ha salido de la sala', 
-          alias: playerLeaving['alias'], 
-          uid: userId, 
-          color: playerLeaving['color'],
-          isEvent: true
-        );
+      if (playerLeaving.isNotEmpty) {
+        await sendMessage(roomCode: roomCode, text: 'ha salido de la sala', alias: playerLeaving['alias'], uid: userId, color: playerLeaving['color'], isEvent: true);
       }
 
       if (roomData['hostId'] == userId) {
-        await roomRef.delete();
+        transaction.delete(roomRef);
       } else {
         players.removeWhere((p) => p['uid'] == userId);
         FieldValue? emptyAtValue = (players.isEmpty) ? FieldValue.serverTimestamp() : null;
-        await roomRef.update({'players': players, 'emptyAt': emptyAtValue});
+        transaction.update(roomRef, {'players': players, 'emptyAt': emptyAtValue});
       }
-    }
+    });
+  }
+
+  Future<void> kickPlayer(String roomCode, String userIdToKick, String hostAlias, String kickedAlias) async {
+    final roomRef = _db.collection('rooms').doc(roomCode);
+    final players = List<Map<String, dynamic>>.from((await roomRef.get()).data()!['players'] ?? []);
+    players.removeWhere((p) => p['uid'] == userIdToKick);
+    await roomRef.update({'players': players});
+    await sendMessage(roomCode: roomCode, text: 'ha expulsado a $kickedAlias', alias: hostAlias, uid: '', color: '#FFFFFF', isEvent: true);
+  }
+
+  Future<void> banPlayer(String roomCode, String userIdToBan, String hostAlias, String bannedAlias) async {
+    final roomRef = _db.collection('rooms').doc(roomCode);
+    final players = List<Map<String, dynamic>>.from((await roomRef.get()).data()!['players'] ?? []);
+    players.removeWhere((p) => p['uid'] == userIdToBan);
+    await roomRef.update({
+      'players': players,
+      'bannedUIDs': FieldValue.arrayUnion([userIdToBan]),
+    });
+    await sendMessage(roomCode: roomCode, text: 'ha baneado a $bannedAlias', alias: hostAlias, uid: '', color: '#FFFFFF', isEvent: true);
   }
 
   Future<void> togglePlayerReadyState(String roomCode, String userId) async {
@@ -195,7 +209,7 @@ class FirestoreService {
       final players = List<Map<String, dynamic>>.from(doc.data()!['players'] ?? []);
       final playerIndex = players.indexWhere((p) => p['uid'] == userId);
       if (playerIndex != -1) {
-        players[playerIndex]['isReady'] = !players[playerIndex]['isReady'];
+        players[playerIndex]['isReady'] = !(players[playerIndex]['isReady'] ?? false);
         await roomRef.update({'players': players});
       }
     }

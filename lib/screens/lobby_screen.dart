@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../services/firestore_service.dart';
 import '../services/user_service.dart';
+import '../models/user_model.dart';
 
 class LobbyScreen extends StatefulWidget {
   static const routeName = '/lobby';
@@ -72,15 +73,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
     }
   }
 
-  void _showRoomClosedDialog() {
+  void _showInfoDialog(String title, String content) {
     if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Sala Cerrada'),
-          content: const Text('La sala ha sido cerrada por el anfitrión o por inactividad.'),
+          title: Text(title),
+          content: Text(content),
           actions: <Widget>[
             TextButton(
               child: const Text('Aceptar'),
@@ -93,7 +94,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
       },
     );
   }
-
 
   @override
   void dispose() {
@@ -113,8 +113,8 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return StreamBuilder<DocumentSnapshot>(
       stream: _firestoreService.getGameRoomStream(_roomCode!),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.active && !snapshot.hasData) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _showRoomClosedDialog());
+        if (snapshot.connectionState == ConnectionState.active && (!snapshot.hasData || snapshot.data?.data() == null)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _showInfoDialog('Sala Cerrada', 'La sala ha sido cerrada por el anfitrión o por inactividad.'));
           return const Scaffold(body: Center(child: Text('La sala ha sido cerrada.')));
         }
 
@@ -122,15 +122,22 @@ class _LobbyScreenState extends State<LobbyScreen> {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        final roomData = snapshot.data!.data() as Map<String, dynamic>?;
-        if (roomData == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _showRoomClosedDialog());
-          return const Scaffold(body: Center(child: Text('La sala ha sido cerrada.')));
+        final roomData = snapshot.data!.data() as Map<String, dynamic>;
+        final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
+        final bannedUIDs = List<String>.from(roomData['bannedUIDs'] ?? []);
+
+        if (bannedUIDs.contains(currentUser?.uid)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _showInfoDialog('Has sido baneado', 'No puedes volver a entrar a esta sala.'));
+          return const Scaffold(body: Center(child: Text('Has sido baneado.')));
+        }
+        
+        if (players.every((p) => p['uid'] != currentUser?.uid)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _showInfoDialog('Has sido expulsado', 'El anfitrión te ha expulsado de la sala.'));
+            return const Scaffold(body: Center(child: Text('Has sido expulsado.')));
         }
 
         final isHost = roomData['hostId'] == currentUser?.uid;
-        final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
-        final allReady = players.isNotEmpty && players.every((p) => p['isReady'] == true);
+        final allReady = players.isNotEmpty && players.length > 1 && players.every((p) => p['isReady'] == true);
         final me = players.firstWhere((p) => p['uid'] == currentUser?.uid, orElse: () => {});
 
         return DefaultTabController(
@@ -148,7 +155,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             ),
             body: Column(
               children: [
-                _buildHeader(),
+                _buildHeader(roomData),
                 Expanded(
                   child: TabBarView(
                     children: [
@@ -158,10 +165,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ],
                   ),
                 ),
-                if (isHost) 
-                  _buildStartGameButton(allReady)
-                else if (me.isNotEmpty) 
-                  _buildReadyButton(me['isReady'] ?? false, currentUser),
+                _buildBottomButton(isHost, allReady, me, currentUser),
               ],
             ),
           ),
@@ -170,13 +174,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Map<String, dynamic> roomData) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          const Text('Código de la Sala:', style: TextStyle(fontSize: 18)),
-          SelectableText(_roomCode!, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)),
+          Text('Jugadores: ${roomData['players'].length}/${roomData['maxPlayers']}', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          SelectableText(_roomCode!, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: _shareInvitation,
@@ -198,13 +203,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: ListTile(
-            onTap: isCurrentUser ? () => _showColorPicker(context, players, currentUserId) : null,
+            onTap: isCurrentUser ? () => _showColorPicker(context, players, currentUserId) : () => _showPlayerProfile(context, player['uid']),
             leading: CircleAvatar(backgroundColor: Color(int.parse(player['color'].substring(1, 7), radix: 16) + 0xFF000000)),
             title: Text(player['alias'] ?? 'Jugador Desconocido'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (player['isReady'] == true) const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 8),
                 if (roomData['hostId'] == player['uid']) const Icon(Icons.star, color: Colors.amber),
               ],
             ),
@@ -213,7 +219,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       },
     );
   }
-
+  
   Widget _buildChatTab(String currentUserId) {
     return Column(
       children: [
@@ -261,10 +267,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start, // Corrected alignment
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
             decoration: BoxDecoration(
               color: isMe ? Theme.of(context).colorScheme.primary.withOpacity(0.2) : Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
@@ -332,24 +339,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildReadyButton(bool isReady, dynamic currentUser) {
+  Widget _buildBottomButton(bool isHost, bool allReady, Map<String, dynamic> me, User? currentUser) {
+    if (isHost) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ElevatedButton(
+          onPressed: allReady ? () => _firestoreService.startGame(_roomCode!) : null,
+          style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: allReady ? Colors.green : Colors.grey),
+          child: const Text('¡Empezar Partida!'),
+        ),
+      );
+    }
+
+    bool isReady = me['isReady'] ?? false;
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: ElevatedButton(
-        onPressed: (isReady || currentUser == null) ? null : () => _firestoreService.togglePlayerReadyState(_roomCode!, currentUser.uid),
+        onPressed: (currentUser == null) ? null : () => _firestoreService.togglePlayerReadyState(_roomCode!, currentUser.uid),
         style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: isReady ? Colors.grey : null),
         child: Text(isReady ? 'Esperando...' : '¿Preparado?'),
-      ),
-    );
-  }
-
-  Widget _buildStartGameButton(bool allReady) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ElevatedButton(
-        onPressed: allReady ? () => _firestoreService.startGame(_roomCode!) : null,
-        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: allReady ? Colors.green : Colors.grey),
-        child: const Text('¡Empezar Partida!'),
       ),
     );
   }
@@ -385,6 +393,52 @@ class _LobbyScreenState extends State<LobbyScreen> {
             }).toList(),
           ),
           actions: [TextButton(child: const Text('Cerrar'), onPressed: () => Navigator.of(context).pop())],
+        );
+      },
+    );
+  }
+
+  void _showPlayerProfile(BuildContext context, String playerUid) async {
+    final profile = await _firestoreService.getUserProfile(playerUid);
+    if (profile == null || !mounted) return;
+
+    final profileData = profile.data() as Map<String, dynamic>;
+    final currentUser = _userService.currentUser;
+    final roomData = (await _firestoreService.getGameRoomStream(_roomCode!).first).data() as Map<String, dynamic>?;
+    final isHost = roomData?['hostId'] == currentUser?.uid;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Perfil de ${profileData['alias']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Nivel: ${((profileData['totalExp'] ?? 0) / 150).floor() + 1}'),
+              Text('Experiencia: ${profileData['totalExp'] ?? 0}'),
+            ],
+          ),
+          actions: [
+            if (isHost && currentUser?.uid != playerUid)
+              TextButton(
+                onPressed: () {
+                  _firestoreService.kickPlayer(_roomCode!, playerUid, currentUser!.alias, profileData['alias']);
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Expulsar', style: TextStyle(color: Colors.orange)),
+              ),
+            if (isHost && currentUser?.uid != playerUid)
+              TextButton(
+                onPressed: () {
+                  _firestoreService.banPlayer(_roomCode!, playerUid, currentUser!.alias, profileData['alias']);
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Banear', style: TextStyle(color: Colors.red)),
+              ),
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+          ],
         );
       },
     );

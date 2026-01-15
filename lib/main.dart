@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:app_links/app_links.dart'; // Use modern package
+import 'package:app_links/app_links.dart';
 import 'firebase_options.dart';
 
 // Screens
@@ -21,14 +21,13 @@ import 'screens/round_result_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/vote_screen.dart';
 
-
 // Services
 import 'services/app_localizations.dart';
 import 'services/character_service.dart';
 import 'services/firestore_service.dart';
 import 'services/language_service.dart';
 import 'services/navigation_service.dart';
-import 'services/profanity_filter_service.dart'; // Import the new service
+import 'services/profanity_filter_service.dart';
 import 'services/theme_service.dart';
 import 'services/user_service.dart';
 
@@ -59,9 +58,8 @@ class _TodosMientenAppState extends State<TodosMientenApp> {
 
   Future<void> _initDeepLinking() async {
     _appLinks = AppLinks();
-
     try {
-      final initialUri = await _appLinks.getInitialAppLink(); // Corrected method name
+      final initialUri = await _appLinks.getInitialAppLink();
       if (initialUri != null) _handleIncomingLink(initialUri);
     } on PlatformException {
       // Handle exception
@@ -97,7 +95,7 @@ class _TodosMientenAppState extends State<TodosMientenApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider(create: (_) => ProfanityFilterService()), // Add the new service
+        Provider(create: (_) => ProfanityFilterService()),
         Provider(create: (_) => FirestoreService()),
         Provider(create: (_) => CharacterService()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
@@ -125,14 +123,14 @@ class _TodosMientenAppState extends State<TodosMientenApp> {
   }
 }
 
-// A cleaner way to initialize Firebase
 class FirebaseInitializer extends StatefulWidget {
   const FirebaseInitializer({super.key});
   @override
   State<FirebaseInitializer> createState() => _FirebaseInitializerState();
 }
+
 class _FirebaseInitializerState extends State<FirebaseInitializer> {
-  late final Future<void> _initialization;
+  late final Future<FirebaseApp?> _initialization;
 
   @override
   void initState() {
@@ -140,13 +138,14 @@ class _FirebaseInitializerState extends State<FirebaseInitializer> {
     _initialization = _initializeFirebase();
   }
 
-  Future<void> _initializeFirebase() async {
+  Future<FirebaseApp?> _initializeFirebase() async {
     try {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      return await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
     } on FirebaseException catch (e) {
-      if (e.code != 'duplicate-app') {
-        rethrow;
+      if (e.code == 'duplicate-app') {
+        return Firebase.app(); // Use existing app
       }
+      rethrow; // Rethrow other Firebase errors
     }
   }
 
@@ -167,8 +166,6 @@ class _FirebaseInitializerState extends State<FirebaseInitializer> {
   }
 }
 
-
-// A new screen to handle redirection for new users.
 class AliasRedirectScreen extends StatelessWidget {
   static const routeName = '/alias-redirect';
   const AliasRedirectScreen({super.key});
@@ -177,11 +174,9 @@ class AliasRedirectScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
     final roomCode = args?['roomCode'];
-
     return AliasScreen(roomCodeToJoin: roomCode);
   }
 }
-
 
 Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
   Widget page;
