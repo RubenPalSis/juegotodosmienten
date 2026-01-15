@@ -6,6 +6,7 @@ import 'package:juegotodosmienten/services/user_service.dart';
 import 'package:juegotodosmienten/services/language_service.dart';
 import 'package:juegotodosmienten/services/theme_service.dart';
 import 'package:juegotodosmienten/services/character_service.dart';
+import 'package:juegotodosmienten/services/profanity_filter_service.dart';
 
 // Imports needed for Firebase and user model mocking
 import 'package:firebase_core/firebase_core.dart';
@@ -95,6 +96,7 @@ void main() {
           ChangeNotifierProvider(create: (_) => LanguageService()),
           ChangeNotifierProvider(create: (_) => ThemeService()),
           ChangeNotifierProvider<UserService>(create: (_) => MockUserService()),
+          Provider(create: (_) => ProfanityFilterService()),
         ],
         child: const TodosMientenApp(),
       ),

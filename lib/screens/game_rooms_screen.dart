@@ -83,7 +83,6 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
                 stream: firestoreService.getAllRooms(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    // This will now show the index error if it happens again.
                     return Center(child: Text('Error: ${snapshot.error}'));
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -92,7 +91,9 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return const Center(child: Text('No hay salas disponibles.'));
                   }
-                  return ListView(children: snapshot.data!.docs.map((doc) => _buildRoomTile(doc, isLoggedIn)).toList());
+                  return ListView(
+                    children: snapshot.data!.docs.map((doc) => _buildRoomTile(doc, isLoggedIn)).toList(),
+                  );
                 },
               ),
             ),
@@ -152,7 +153,7 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
         title: Text("Sala de $hostAlias"),
         subtitle: Text('Jugadores: ${players.length}/${room['maxPlayers']}'),
         trailing: SizedBox(
-          width: 90, // Constrain button width
+          width: 90,
           child: ElevatedButton(
             onPressed: isLoggedIn && !isFull ? () => _joinRoom(room['roomCode'], isPublic: isPublic) : null,
             child: const Text('Unirse'),

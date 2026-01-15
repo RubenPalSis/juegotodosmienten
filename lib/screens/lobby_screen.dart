@@ -18,6 +18,15 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   String? _roomCode;
   final _chatController = TextEditingController();
+  late final UserService _userService;
+  late final FirestoreService _firestoreService;
+
+  @override
+  void initState() {
+    super.initState();
+    _userService = Provider.of<UserService>(context, listen: false);
+    _firestoreService = Provider.of<FirestoreService>(context, listen: false);
+  }
 
   @override
   void didChangeDependencies() {
@@ -29,9 +38,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   Future<void> _leaveRoom() async {
-    final user = Provider.of<UserService>(context, listen: false).currentUser;
+    final user = _userService.currentUser;
     if (_roomCode != null && user != null) {
-      await Provider.of<FirestoreService>(context, listen: false).leaveGameRoom(roomCode: _roomCode!, userId: user.uid);
+      await _firestoreService.leaveGameRoom(roomCode: _roomCode!, userId: user.uid);
     }
   }
 
@@ -45,15 +54,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Future<void> _sendMessage() async {
     if (_chatController.text.trim().isEmpty) return;
 
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    final user = Provider.of<UserService>(context, listen: false).currentUser;
-    final roomSnapshot = await firestoreService.getGameRoomStream(_roomCode!).first;
+    final user = _userService.currentUser;
+    final roomSnapshot = await _firestoreService.getGameRoomStream(_roomCode!).first;
     final roomData = roomSnapshot.data() as Map<String, dynamic>?;
     final players = roomData?['players'] as List<dynamic>? ?? [];
     final currentPlayer = players.firstWhere((p) => p['uid'] == user?.uid, orElse: () => null);
 
     if (user != null && currentPlayer != null) {
-      await firestoreService.sendMessage(
+      await _firestoreService.sendMessage(
         roomCode: _roomCode!,
         text: _chatController.text.trim(),
         alias: user.alias,
@@ -64,6 +72,29 @@ class _LobbyScreenState extends State<LobbyScreen> {
     }
   }
 
+  void _showRoomClosedDialog() {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sala Cerrada'),
+          content: const Text('La sala ha sido cerrada por el anfitrión o por inactividad.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Aceptar'),
+              onPressed: () {
+                if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
   @override
   void dispose() {
     _leaveRoom();
@@ -73,36 +104,34 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final firestoreService = Provider.of<FirestoreService>(context);
-    final currentUser = Provider.of<UserService>(context, listen: false).currentUser;
+    final currentUser = _userService.currentUser;
 
     if (_roomCode == null) {
       return const Scaffold(body: Center(child: Text('Error: Código de sala no encontrado.')));
     }
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: firestoreService.getGameRoomStream(_roomCode!),
+      stream: _firestoreService.getGameRoomStream(_roomCode!),
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.active && !snapshot.hasData) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => _showRoomClosedDialog());
+          return const Scaffold(body: Center(child: Text('La sala ha sido cerrada.')));
+        }
+
         if (!snapshot.hasData) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
         final roomData = snapshot.data!.data() as Map<String, dynamic>?;
         if (roomData == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('La sala ha sido cerrada por el anfitrión o por inactividad.')),
-              );
-            }
-          });
+          WidgetsBinding.instance.addPostFrameCallback((_) => _showRoomClosedDialog());
           return const Scaffold(body: Center(child: Text('La sala ha sido cerrada.')));
         }
 
         final isHost = roomData['hostId'] == currentUser?.uid;
         final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
-        final allReady = players.every((p) => p['isReady'] == true);
+        final allReady = players.isNotEmpty && players.every((p) => p['isReady'] == true);
+        final me = players.firstWhere((p) => p['uid'] == currentUser?.uid, orElse: () => {});
 
         return DefaultTabController(
           length: isHost ? 3 : 2,
@@ -111,9 +140,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
               title: const Text('Sala de Espera'),
               bottom: TabBar(
                 tabs: [
-                  const Tab(text: 'Jugadores'),
-                  const Tab(text: 'Chat'),
-                  if (isHost) const Tab(text: 'Configuración'),
+                  const Tab(icon: Icon(Icons.people), text: 'Jugadores'),
+                  const Tab(icon: Icon(Icons.chat), text: 'Chat'),
+                  if (isHost) const Tab(icon: Icon(Icons.settings), text: 'Ajustes'),
                 ],
               ),
             ),
@@ -129,10 +158,10 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     ],
                   ),
                 ),
-                if (isHost && allReady)
-                  _buildStartGameButton(),
-                if(!isHost)
-                  _buildReadyButton(players.firstWhere((p) => p['uid'] == currentUser?.uid, orElse: () => {})['isReady'] ?? false),
+                if (isHost) 
+                  _buildStartGameButton(allReady)
+                else if (me.isNotEmpty) 
+                  _buildReadyButton(me['isReady'] ?? false, currentUser),
               ],
             ),
           ),
@@ -184,21 +213,25 @@ class _LobbyScreenState extends State<LobbyScreen> {
       },
     );
   }
-  
+
   Widget _buildChatTab(String currentUserId) {
     return Column(
       children: [
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: Provider.of<FirestoreService>(context).getChatStream(_roomCode!),
+            stream: _firestoreService.getChatStream(_roomCode!),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
               final messages = snapshot.data!.docs;
               return ListView.builder(
                 reverse: true,
                 itemCount: messages.length,
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
                 itemBuilder: (context, index) {
                   final message = messages[index].data() as Map<String, dynamic>;
+                  if (message['isEvent'] == true) {
+                    return _buildEventMessage(message);
+                  }
                   final bool isMe = message['uid'] == currentUserId;
                   return _buildChatMessage(message, isMe);
                 },
@@ -211,27 +244,15 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildSettingsTab(Map<String, dynamic> roomData) {
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        SwitchListTile.adaptive(
-          title: const Text('Sala Pública'),
-          value: roomData['isPublic'],
-          onChanged: (value) => firestoreService.updateRoomSettings(_roomCode!, isPublic: value),
+  Widget _buildEventMessage(Map<String, dynamic> message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Text(
+          '${message['alias']} ${message['text']}',
+          style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
         ),
-        DropdownButtonFormField<int>(
-          value: roomData['maxPlayers'],
-          decoration: const InputDecoration(labelText: 'Jugadores Máximos'),
-          items: [6, 8, 10, 12].map((value) => DropdownMenuItem(value: value, child: Text('$value jugadores'))).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              firestoreService.updateRoomSettings(_roomCode!, maxPlayers: value);
-            }
-          },
-        ),
-      ],
+      ),
     );
   }
 
@@ -240,7 +261,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start, // Corrected alignment
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -288,32 +309,53 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildReadyButton(bool isReady) {
+  Widget _buildSettingsTab(Map<String, dynamic> roomData) {
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        SwitchListTile.adaptive(
+          title: const Text('Sala Pública'),
+          value: roomData['isPublic'] ?? true,
+          onChanged: (value) => _firestoreService.updateRoomSettings(_roomCode!, isPublic: value),
+        ),
+        DropdownButtonFormField<int>(
+          value: roomData['maxPlayers'],
+          decoration: const InputDecoration(labelText: 'Jugadores Máximos'),
+          items: [6, 8, 10, 12].map((value) => DropdownMenuItem(value: value, child: Text('$value jugadores'))).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              _firestoreService.updateRoomSettings(_roomCode!, maxPlayers: value);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadyButton(bool isReady, dynamic currentUser) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: ElevatedButton(
-        onPressed: isReady ? null : () => Provider.of<FirestoreService>(context, listen: false).togglePlayerReadyState(_roomCode!, Provider.of<UserService>(context, listen: false).currentUser!.uid),
+        onPressed: (isReady || currentUser == null) ? null : () => _firestoreService.togglePlayerReadyState(_roomCode!, currentUser.uid),
         style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: isReady ? Colors.grey : null),
         child: Text(isReady ? 'Esperando...' : '¿Preparado?'),
       ),
     );
   }
 
-  Widget _buildStartGameButton() {
+  Widget _buildStartGameButton(bool allReady) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: ElevatedButton(
-        onPressed: () => Provider.of<FirestoreService>(context, listen: false).startGame(_roomCode!),
-        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: Colors.green),
+        onPressed: allReady ? () => _firestoreService.startGame(_roomCode!) : null,
+        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: allReady ? Colors.green : Colors.grey),
         child: const Text('¡Empezar Partida!'),
       ),
     );
   }
 
   void _showColorPicker(BuildContext context, List<Map<String, dynamic>> players, String currentUserId) {
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
     final usedColors = players.map((p) => p['color']).toSet();
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -322,14 +364,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
           content: Wrap(
             spacing: 8.0,
             runSpacing: 8.0,
-            children: firestoreService.availableColors.map((colorHex) {
+            children: _firestoreService.availableColors.map((colorHex) {
               final color = Color(int.parse(colorHex.substring(1, 7), radix: 16) + 0xFF000000);
               final isUsed = usedColors.contains(colorHex);
               return GestureDetector(
                 onTap: () async {
                   if (isUsed) return;
                   try {
-                    await firestoreService.changePlayerColor(_roomCode!, currentUserId, colorHex);
+                    await _firestoreService.changePlayerColor(_roomCode!, currentUserId, colorHex);
                     Navigator.of(context).pop();
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));

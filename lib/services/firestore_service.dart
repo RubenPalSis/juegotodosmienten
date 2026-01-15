@@ -60,12 +60,14 @@ class FirestoreService {
     required String alias,
     required String uid,
     required String color,
+    bool isEvent = false,
   }) async {
     await _db.collection('rooms').doc(roomCode).collection('messages').add({
       'text': text,
       'alias': alias,
       'uid': uid,
       'color': color,
+      'isEvent': isEvent,
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
@@ -140,6 +142,15 @@ class FirestoreService {
     await roomRef.update({
       'players': FieldValue.arrayUnion([playerData]),
     });
+    
+    await sendMessage(
+      roomCode: roomCode, 
+      text: 'se ha unido a la sala', 
+      alias: playerData['alias'], 
+      uid: playerData['uid'], 
+      color: playerData['color'], 
+      isEvent: true
+    );
 
     return true;
   }
@@ -153,14 +164,25 @@ class FirestoreService {
 
     if (doc.exists) {
       final roomData = doc.data()!;
+      final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
+      final playerLeaving = players.firstWhere((p) => p['uid'] == userId, orElse: () => {});
+
+      if(playerLeaving.isNotEmpty) {
+        await sendMessage(
+          roomCode: roomCode, 
+          text: 'ha salido de la sala', 
+          alias: playerLeaving['alias'], 
+          uid: userId, 
+          color: playerLeaving['color'],
+          isEvent: true
+        );
+      }
+
       if (roomData['hostId'] == userId) {
         await roomRef.delete();
       } else {
-        final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
         players.removeWhere((p) => p['uid'] == userId);
-        
         FieldValue? emptyAtValue = (players.isEmpty) ? FieldValue.serverTimestamp() : null;
-
         await roomRef.update({'players': players, 'emptyAt': emptyAtValue});
       }
     }
