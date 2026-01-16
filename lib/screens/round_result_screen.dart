@@ -1,11 +1,13 @@
-
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 import '../services/app_localizations.dart';
 import '../services/navigation_service.dart';
+import '../services/user_service.dart';
 import 'day_clue_screen.dart';
-// import 'game_over_screen.dart'; // Import for game over condition
+// import 'game_over_screen.dart';
 
 class RoundResultScreen extends StatefulWidget {
   static const routeName = '/round_result';
@@ -17,16 +19,24 @@ class RoundResultScreen extends StatefulWidget {
 }
 
 class _RoundResultScreenState extends State<RoundResultScreen> {
+  bool _showRole = false;
 
   @override
   void initState() {
     super.initState();
-    // After a delay, check game state and navigate to the next screen
-    Timer(const Duration(seconds: 5), () {
-      // TODO: Implement logic to check if the game is over.
-      // If game over -> NavigationService.pushReplacementNamed(GameOverScreen.routeName);
-      // Else -> start next round
-      NavigationService.pushReplacementNamed(DayClueScreen.routeName);
+    // Reveal the role after a short delay
+    Timer(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _showRole = true);
+    });
+
+    // Navigate to the next screen after a longer delay
+    Timer(const Duration(seconds: 7), () {
+      if (mounted) {
+        // TODO: Implement logic to check if the game is over.
+        // If game over -> NavigationService.pushReplacementNamed(GameOverScreen.routeName);
+        // Else -> start next round (night phase)
+        NavigationService.pushReplacementNamed(DayClueScreen.routeName); // Placeholder for now
+      }
     });
   }
 
@@ -35,55 +45,78 @@ class _RoundResultScreenState extends State<RoundResultScreen> {
     final localizations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    // Get the eliminated player from the route arguments
-    final eliminatedPlayer = ModalRoute.of(context)!.settings.arguments as String?;
+    // TODO: Recibir un objeto jugador completo con alias, rol y modelo de personaje
+    final eliminatedPlayerAlias = ModalRoute.of(context)!.settings.arguments as String? ?? 'Nadie';
+    const wasImpostor = false; // Placeholder
+    final characterFile = context.read<UserService>().currentUser?.selectedCharacter ?? 'robot.glb'; // Placeholder
 
-    // TODO: Fetch the real role of the eliminated player
-    const bool wasImpostor = false; // Placeholder
+    final revealText = wasImpostor
+        ? localizations.translate('was_an_impostor')
+        : localizations.translate('was_not_an_impostor');
+
+    final revealColor = wasImpostor ? theme.colorScheme.error : Colors.green.shade400;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(localizations.translate('round_result')),
-        automaticallyImplyLeading: false,
-      ),
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  localizations.translate('player_eliminated'),
-                  style: theme.textTheme.titleLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  eliminatedPlayer ?? 'Nadie', // TODO: Localize 'Nadie'
-                  style: theme.textTheme.displayMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Card(
-                  color: wasImpostor ? theme.colorScheme.secondary : theme.colorScheme.surface,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      wasImpostor
-                          ? '¡Era un Impostor!' // TODO: Localize
-                          : 'No era un Impostor.', // TODO: Localize
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: wasImpostor ? theme.colorScheme.onSecondary : theme.textTheme.titleMedium?.color
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '$eliminatedPlayerAlias ha sido expulsado.', // TODO: Localizar
+                style: theme.textTheme.headlineLarge?.copyWith(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Grayscale model of the eliminated player
+                    ColorFiltered(
+                      colorFilter: const ColorFilter.matrix([
+                        0.2126, 0.7152, 0.0722, 0,
+                        0.2126, 0.7152, 0.0722, 0,
+                        0.2126, 0.7152, 0.0722, 0,
+                        0,      0,      0,      1,
+                      ]),
+                      child: ModelViewer(
+                        src: 'assets/models/$characterFile',
+                        alt: 'Personaje eliminado',
+                        cameraControls: false,
+                        backgroundColor: Colors.transparent,
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  ),
+                    // Role reveal text that fades in
+                    AnimatedOpacity(
+                      opacity: _showRole ? 1.0 : 0.0,
+                      duration: const Duration(seconds: 1),
+                      child: Container(
+                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                         color: Colors.black.withOpacity(0.6),
+                         child: Text(
+                          revealText,
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            color: revealColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 40),
-                const CircularProgressIndicator(), // Show progress to indicate auto-navigation
-              ],
-            ),
+              ),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+              const SizedBox(height: 16),
+              Text(
+                'Iniciando la siguiente fase...',
+                style: theme.textTheme.titleMedium?.copyWith(color: Colors.white70),
+              ),
+              const SizedBox(height: 32),
+            ],
           ),
         ),
       ),

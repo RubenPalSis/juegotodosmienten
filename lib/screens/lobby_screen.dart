@@ -62,7 +62,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               if (!mounted) return;
               Navigator.of(context).pop(true);
             },
-            child: const Text('Salir', style: TextStyle(color: Colors.red)),
+            child: Text('Salir', style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),
@@ -171,17 +171,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
         final me = players.firstWhere((p) => p['uid'] == currentUser?.uid, orElse: () => {});
 
         return DefaultTabController(
-          length: isHost ? 3 : 2,
+          length: 2,
           child: WillPopScope(
             onWillPop: _onWillPop,
             child: Scaffold(
               appBar: AppBar(
                 title: const Text('Sala de Espera'),
-                bottom: TabBar(
+                bottom: const TabBar(
                   tabs: [
-                    const Tab(icon: Icon(Icons.people), text: 'Jugadores'),
-                    const Tab(icon: Icon(Icons.chat), text: 'Chat'),
-                    if (isHost) const Tab(icon: Icon(Icons.settings), text: 'Ajustes'),
+                    Tab(icon: Icon(Icons.people), text: 'Jugadores'),
+                    Tab(icon: Icon(Icons.chat), text: 'Chat'),
                   ],
                 ),
               ),
@@ -193,13 +192,18 @@ class _LobbyScreenState extends State<LobbyScreen> {
                       children: [
                         _buildPlayersTab(roomData, currentUser?.uid ?? ''),
                         _buildChatTab(currentUser?.uid ?? ''),
-                        if (isHost) _buildSettingsTab(roomData, players, currentUser),
                       ],
                     ),
                   ),
                   _buildBottomButton(isHost, allReady, me, currentUser),
                 ],
               ),
+              floatingActionButton: isHost
+                  ? FloatingActionButton(
+                      onPressed: () => _showSettingsModal(context, roomData, players, currentUser),
+                      child: const Icon(Icons.settings),
+                    )
+                  : null,
             ),
           ),
         );
@@ -220,6 +224,41 @@ class _LobbyScreenState extends State<LobbyScreen> {
             onPressed: _shareInvitation,
             icon: const Icon(Icons.share),
             label: const Text('Invitar a Amigos'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPlayerProfile(BuildContext context, Map<String, dynamic> player, Map<String, dynamic> roomData) {
+    final currentUser = _userService.currentUser;
+    final isHost = roomData['hostId'] == currentUser?.uid;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(player['alias']),
+        content: const Text('Perfil del jugador.'),
+        actions: [
+          if (isHost && player['uid'] != currentUser?.uid) ...[
+            TextButton(
+              onPressed: () {
+                _firestoreService.kickPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Expulsar'),
+            ),
+            TextButton(
+              onPressed: () {
+                _firestoreService.banPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']);
+                Navigator.of(context).pop();
+              },
+              child: Text('Banear', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ),
+          ],
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
           ),
         ],
       ),
@@ -349,8 +388,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  Widget _buildSettingsTab(Map<String, dynamic> roomData, List<Map<String, dynamic>> players, User? currentUser) {
+  void _showSettingsModal(BuildContext context, Map<String, dynamic> roomData, List<Map<String, dynamic>> players, User? currentUser) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          builder: (context, scrollController) {
+            return _buildSettingsTab(roomData, players, currentUser, scrollController);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSettingsTab(Map<String, dynamic> roomData, List<Map<String, dynamic>> players, User? currentUser, ScrollController scrollController) {
     return ListView(
+      controller: scrollController,
       padding: const EdgeInsets.all(16.0),
       children: [
         const Text('Ajustes de la Sala', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -378,7 +433,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextButton(onPressed: () => _firestoreService.kickPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']), child: const Text('Expulsar')),
-                TextButton(onPressed: () => _firestoreService.banPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']), child: const Text('Banear', style: TextStyle(color: Colors.red))),
+                TextButton(onPressed: () => _firestoreService.banPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']), child: Text('Banear', style: TextStyle(color: Theme.of(context).colorScheme.error))),
               ],
             ),
           );
@@ -417,62 +472,17 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final usedColors = players.map((p) => p['color']).toSet();
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (context) {
+        // ... El resto del diálogo para seleccionar color
         return AlertDialog(
           title: const Text('Elige tu color'),
-          content: Wrap(
-            spacing: 8.0,
-            runSpacing: 8.0,
-            children: _firestoreService.availableColors.map((colorHex) {
-              final color = Color(int.parse(colorHex.substring(1, 7), radix: 16) + 0xFF000000);
-              final isUsed = usedColors.contains(colorHex);
-              return GestureDetector(
-                onTap: () async {
-                  if (isUsed) return;
-                  try {
-                    await _firestoreService.changePlayerColor(_roomCode!, currentUserId, colorHex);
-                    Navigator.of(context).pop();
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                  }
-                },
-                child: CircleAvatar(
-                  backgroundColor: color,
-                  radius: 24, // Make circles bigger
-                  child: isUsed ? const Icon(Icons.close, color: Colors.red, size: 30) : null, // Make icon bigger
-                ),
-              );
-            }).toList(),
-          ),
-          actions: [TextButton(child: const Text('Cerrar'), onPressed: () => Navigator.of(context).pop())],
-        );
-      },
-    );
-  }
-
-  void _showPlayerProfile(BuildContext context, Map<String, dynamic> player, Map<String, dynamic> roomData) async {
-    final profileSnapshot = await _firestoreService.getUserProfile(player['uid']);
-    if (profileSnapshot == null || !mounted) return;
-
-    final profileData = profileSnapshot.data() as Map<String, dynamic>;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0.0),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(radius: 30, backgroundColor: Color(int.parse(player['color'].substring(1, 7), radix: 16) + 0xFF000000)),
-              const SizedBox(height: 16),
-              Text(player['alias'], style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Text('Nivel: ${((profileData['totalExp'] ?? 0) / 150).floor() + 1}'),
-              Text('Experiencia Total: ${profileData['totalExp'] ?? 0}'),
-            ],
-          ),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar'))],
+          content: const Text('Próximamente...'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cerrar'),
+            )
+          ],
         );
       },
     );

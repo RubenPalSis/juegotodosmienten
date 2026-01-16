@@ -19,7 +19,7 @@ class GameRoomsScreen extends StatefulWidget {
 
 class _GameRoomsScreenState extends State<GameRoomsScreen> {
   final _roomCodeController = TextEditingController();
-  bool _isLoading = false;
+  bool _isJoining = false;
 
   @override
   void initState() {
@@ -27,38 +27,58 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
     Provider.of<FirestoreService>(context, listen: false).cleanupInactiveRooms();
   }
 
-  Future<void> _joinRoom(String roomCode, {bool isPublic = false}) async {
+  Future<void> _joinRoom(String roomCode) async {
     if (roomCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor, introduce un código de sala.')));
-      return;
-    }
-    if (!isPublic) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Necesitas un código para entrar en esta sala.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, introduce un código de sala.')),
+      );
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isJoining = true);
 
     final firestoreService = Provider.of<FirestoreService>(context, listen: false);
     final user = Provider.of<UserService>(context, listen: false).currentUser;
+    final messenger = ScaffoldMessenger.of(context);
 
     if (user == null) {
-      setState(() => _isLoading = false);
+      setState(() => _isJoining = false);
       return;
     }
 
     try {
-      final success = await firestoreService.joinGameRoom(
+      await firestoreService.joinGameRoom(
         roomCode: roomCode,
-        playerData: {'uid': user.uid, 'alias': user.alias},
+        playerData: {
+          'uid': user.uid,
+          'alias': user.alias,
+          'isReady': false,
+        },
       );
-      if (success && mounted) {
-        NavigationService.push(LobbyScreen.routeName, arguments: {'roomCode': roomCode});
+
+      if (!mounted) return;
+
+      NavigationService.pushReplacementNamed(
+        LobbyScreen.routeName,
+        arguments: {'roomCode': roomCode},
+      );
+
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(e.message ?? 'Ha ocurrido un error de conexión.')),
+        );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isJoining = false);
+      }
     }
   }
 
@@ -68,99 +88,149 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
     final isLoggedIn = Provider.of<UserService>(context, listen: false).currentUser != null;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Salas de Juego')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildJoinWithCodeSection(isLoggedIn),
-            const SizedBox(height: 24),
-            const Text('Salas Disponibles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const Divider(),
-            Expanded(
+      appBar: AppBar(title: const Text('Buscar Partida')),
+      body: Row(
+        children: [
+          // Game Rooms Grid
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
               child: StreamBuilder<QuerySnapshot>(
                 stream: firestoreService.getAllRooms(),
                 builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
+                  if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+                  if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+
+                  final publicRooms = snapshot.data?.docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>?;
+                    return data?['isPublic'] == true;
+                  }).toList() ?? [];
+
+                  if (publicRooms.isEmpty) {
+                    return const Center(
+                      child: Text('No hay salas públicas disponibles.\n¡Crea una para empezar!', textAlign: TextAlign.center, style: TextStyle(fontSize: 18))
+                    );
                   }
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('No hay salas disponibles.'));
-                  }
-                  return ListView.builder(
-                      itemCount: snapshot.data!.docs.length,
+
+                  return GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 300,
+                        childAspectRatio: 1.4,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: publicRooms.length,
                       itemBuilder: (context, index) {
-                        final doc = snapshot.data!.docs[index];
-                        return _buildRoomTile(doc, isLoggedIn);
+                        final doc = publicRooms[index];
+                        return _buildRoomCard(doc, isLoggedIn);
                       });
                 },
               ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: isLoggedIn ? () => NavigationService.push(CreateRoomScreen.routeName) : null,
-        label: const Text('Crear Sala'),
-        icon: const Icon(Icons.add),
-      ),
-    );
-  }
+          ),
 
-  Widget _buildJoinWithCodeSection(bool isLoggedIn) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextField(
-          controller: _roomCodeController,
-          decoration: const InputDecoration(labelText: 'Código de la Sala', border: OutlineInputBorder()),
-          enabled: isLoggedIn,
-        ),
-        const SizedBox(height: 8),
-        _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : ElevatedButton(
-                onPressed: isLoggedIn ? () => _joinRoom(_roomCodeController.text.trim(), isPublic: true) : null,
-                child: const Text('Unirse con Código'),
+          const VerticalDivider(thickness: 1, width: 1),
+
+          // Actions Sidebar
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Join with code
+                  Text('Unirse con Código', style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _roomCodeController,
+                    decoration: const InputDecoration(labelText: 'Código de la Sala', border: OutlineInputBorder()),
+                    enabled: isLoggedIn,
+                  ),
+                  const SizedBox(height: 16),
+                  _isJoining
+                      ? const Center(child: CircularProgressIndicator())
+                      : ElevatedButton.icon(
+                          icon: const Icon(Icons.login),
+                          style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                          onPressed: isLoggedIn ? () => _joinRoom(_roomCodeController.text.trim()) : null,
+                          label: const Text('Unirse a Sala Privada'),
+                        ),
+
+                  const Divider(height: 48),
+
+                  // Create room
+                  Text('¿No encuentras sala?', style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.add_home_work_outlined),
+                    label: const Text('Crear Sala Pública'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      textStyle: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    onPressed: isLoggedIn ? () => NavigationService.pushReplacementNamed(CreateRoomScreen.routeName) : null,
+                  ),
+                ],
               ),
-      ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildRoomTile(DocumentSnapshot roomSnapshot, bool isLoggedIn) {
+  Widget _buildRoomCard(DocumentSnapshot roomSnapshot, bool isLoggedIn) {
+    final theme = Theme.of(context);
     final room = roomSnapshot.data() as Map<String, dynamic>?;
     if (room == null) return const SizedBox.shrink();
 
     final players = List<Map<String, dynamic>>.from(room['players'] ?? []);
-    final isPublic = room['isPublic'] ?? false;
-    final isFull = players.length >= (room['maxPlayers'] ?? 0);
-
-    final host = players.firstWhere((p) => p['uid'] == room['hostId'], orElse: () => {'alias': 'Desconocido'});
-    final hostAlias = host['alias'];
-
-    IconData lockIcon = isPublic ? Icons.lock_open : Icons.lock;
-    Color iconColor = isPublic ? Colors.green : Colors.red;
-    if (isFull) {
-      lockIcon = Icons.lock;
-      iconColor = Colors.grey;
-    }
+    final maxPlayers = room['maxPlayers'] ?? 0;
+    final isFull = players.length >= maxPlayers;
+    final hostAlias = room['hostAlias'] ?? 'Anfitrión Desconocido';
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
-        leading: Icon(lockIcon, color: iconColor),
-        title: Text("Sala de $hostAlias"),
-        subtitle: Text('Jugadores: ${players.length}/${room['maxPlayers']}'),
-        trailing: SizedBox(
-          width: 90, // Constrain button width
-          child: ElevatedButton(
-            onPressed: isLoggedIn && !isFull ? () => _joinRoom(room['roomCode'], isPublic: isPublic) : null,
-            child: const Text('Unirse'),
-          ),
+      elevation: 4.0,
+      child: InkWell(
+        onTap: isLoggedIn && !isFull ? () => _joinRoom(roomSnapshot.id) : null,
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    "Sala de $hostAlias",
+                    style: theme.textTheme.titleLarge,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${players.length}/$maxPlayers Jugadores',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: isLoggedIn && !isFull ? () => _joinRoom(roomSnapshot.id) : null,
+                    child: const Text('Unirse'),
+                  ),
+                ],
+              ),
+            ),
+            if (isFull)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: const Center(child: Text('LLENO', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))),
+              ),
+          ],
         ),
       ),
     );

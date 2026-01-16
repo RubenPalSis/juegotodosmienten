@@ -1,202 +1,152 @@
 import 'package:flutter/material.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../services/user_service.dart';
-import '../services/character_service.dart';
 import '../services/navigation_service.dart';
 import '../screens/settings_screen.dart';
+import '../screens/game_rooms_screen.dart';
 import '../screens/customize_avatar_screen.dart';
-import '../screens/game_rooms_screen.dart'; // Correct import
 
-class MainLayout extends StatefulWidget {
+class MainLayout extends StatelessWidget {
   const MainLayout({super.key});
 
   @override
-  State<MainLayout> createState() => _MainLayoutState();
-}
-
-class _MainLayoutState extends State<MainLayout> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _widgetOptions = <Widget>[
-    PlayScreen(),
-    AvatarShowcaseScreen(),
-    StoreScreen(), // Placeholder
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Consumer<UserService>(
-      builder: (context, userService, child) {
-        final user = userService.currentUser;
-        if (user == null) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text('Alias: ${user.alias}'),
-            automaticallyImplyLeading: false,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () => NavigationService.push(SettingsScreen.routeName),
-                tooltip: 'Ajustes',
-              ),
-            ],
-          ),
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: _widgetOptions,
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            items: const <BottomNavigationBarItem>[
-              BottomNavigationBarItem(icon: Icon(Icons.gamepad_outlined), label: 'Jugar'),
-              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Personaje'),
-              BottomNavigationBarItem(icon: Icon(Icons.store_outlined), label: 'Tienda'),
-            ],
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-          ),
-        );
-      },
+    return const Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // TODO: Podrías añadir un fondo de estrellas aquí
+          // Image.asset('assets/images/background_stars.png', fit: BoxFit.cover, width: double.infinity, height: double.infinity,),
+          _MainMenuContent(),
+          _BottomActionBar(),
+        ],
+      ),
     );
   }
 }
 
-// --- Play Screen --- //
-class PlayScreen extends StatelessWidget {
-  const PlayScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<UserService>(
-      builder: (context, userService, child) {
-        if (userService.currentUser == null) return const SizedBox.shrink();
-
-        final level = userService.level;
-        final expInCurrentLevel = userService.expInCurrentLevel;
-        final expForNextLevel = userService.expForNextLevel;
-        final progress = expInCurrentLevel / expForNextLevel;
-
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('Nivel $level', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-                borderRadius: BorderRadius.circular(5),
-              ),
-              const SizedBox(height: 8),
-              Text('${expInCurrentLevel.toInt()} / ${expForNextLevel.toInt()} EXP'),
-              const SizedBox(height: 48),
-              ElevatedButton(
-                onPressed: () => NavigationService.push(GameRoomsScreen.routeName), // Correct navigation
-                child: const Text('Buscar Partida'),
-              )
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-// --- Character Tab ---
-class AvatarShowcaseScreen extends StatefulWidget {
-  const AvatarShowcaseScreen({super.key});
-
-  @override
-  State<AvatarShowcaseScreen> createState() => _AvatarShowcaseScreenState();
-}
-
-class _AvatarShowcaseScreenState extends State<AvatarShowcaseScreen> {
-  int _browsingIndex = 0;
+class _MainMenuContent extends StatelessWidget {
+  const _MainMenuContent();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final characterService = Provider.of<CharacterService>(context, listen: false);
-    final characters = characterService.characters;
-    final browsingCharacter = characters[_browsingIndex];
-    
-    void nextCharacter() => setState(() => _browsingIndex = (_browsingIndex + 1) % characters.length);
-    void previousCharacter() => setState(() => _browsingIndex = (_browsingIndex - 1 + characters.length) % characters.length);
+    final titleStyle = theme.textTheme.displayLarge?.copyWith(
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 4,
+      shadows: [
+        const Shadow(blurRadius: 10.0, color: Colors.white, offset: Offset(0, 0)),
+      ],
+    );
 
-    return Consumer<UserService>(
-      builder: (context, userService, child) {
-        final user = userService.currentUser;
-        if (user == null) return const SizedBox.shrink();
-
-        final selectedCharacterFile = user.selectedCharacter ?? 'robot.glb';
-        final isCharacterSelected = browsingCharacter.assetFile == selectedCharacterFile;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    return SafeArea(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  ModelViewer(
-                    key: ValueKey(browsingCharacter.assetFile),
-                    src: 'assets/models/${browsingCharacter.assetFile}',
-                    alt: browsingCharacter.name,
-                    autoRotate: true,
-                    cameraControls: true,
-                    backgroundColor: theme.scaffoldBackgroundColor,
-                    environmentImage: 'neutral',
-                  ),
-                  Positioned(left: 0, child: IconButton(icon: const Icon(Icons.arrow_back_ios_new, size: 30), onPressed: previousCharacter)),
-                  Positioned(right: 0, child: IconButton(icon: const Icon(Icons.arrow_forward_ios, size: 30), onPressed: nextCharacter)),
-                ],
-              ),
+            const Spacer(flex: 2),
+            // Game Title
+            Text('TODOS MIENTEN', style: titleStyle),
+            const Spacer(flex: 1),
+            // Menu Buttons
+            _MainMenuButton(
+              text: 'EN LÍNEA',
+              onPressed: () => NavigationService.push(GameRoomsScreen.routeName),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(browsingCharacter.name, style: theme.textTheme.displaySmall, textAlign: TextAlign.center),
+            const SizedBox(height: 20),
+            _MainMenuButton(
+              text: 'PERSONALIZAR',
+              onPressed: () {
+                final userService = Provider.of<UserService>(context, listen: false);
+                final character = userService.currentUser?.selectedCharacter ?? 'robot.glb';
+                NavigationService.push(CustomizeAvatarScreen.routeName, arguments: {'characterFile': character});
+              },
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  if (!isCharacterSelected)
-                    ElevatedButton(
-                      onPressed: () => userService.updateCharacter(browsingCharacter.assetFile),
-                      child: const Text('Seleccionar'),
-                    ),
-                  if (isCharacterSelected)
-                    ElevatedButton(
-                      onPressed: () => NavigationService.push(
-                        CustomizeAvatarScreen.routeName,
-                        arguments: {'characterFile': selectedCharacterFile},
-                      ),
-                      child: const Text('Personalizar'),
-                    ),
-                ],
-              ),
-            ),
+            const Spacer(flex: 2),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-// --- Store Tab (Placeholder) ---
-class StoreScreen extends StatelessWidget {
-  const StoreScreen({super.key});
+class _MainMenuButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onPressed;
+
+  const _MainMenuButton({required this.text, required this.onPressed});
+
   @override
-  Widget build(BuildContext context) => const Center(child: Text('Pantalla de Tienda'));
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final buttonTextStyle = theme.textTheme.headlineMedium?.copyWith(
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+      letterSpacing: 2,
+    );
+
+    return InkWell(
+      onTap: onPressed,
+      child: Container(
+        width: 350, // Ancho fijo para los botones
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white, width: 3),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Center(
+          child: Text(text, style: buttonTextStyle),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomActionBar extends StatelessWidget {
+  const _BottomActionBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 24.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _RoundIconButton(icon: Icons.settings, onPressed: () => NavigationService.push(SettingsScreen.routeName)),
+            const SizedBox(width: 20),
+            _RoundIconButton(icon: Icons.person, onPressed: () { /* TODO: Perfil de usuario */ }),
+            const SizedBox(width: 20),
+            _RoundIconButton(icon: Icons.store, onPressed: () { /* TODO: Tienda */ }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const _RoundIconButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      customBorder: const CircleBorder(),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+        child: Icon(icon, color: Colors.white, size: 30),
+      ),
+    );
+  }
 }

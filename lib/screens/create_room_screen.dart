@@ -27,7 +27,6 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     final user = Provider.of<UserService>(context, listen: false).currentUser;
 
     if (user == null) {
-      // This should ideally not happen if the UI is built correctly
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error: Usuario no encontrado')),
@@ -38,11 +37,10 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     try {
       final roomCode = await firestoreService.createRoom(
         hostId: user.uid,
-        hostData: {'uid': user.uid, 'alias': user.alias},
+        hostData: {'uid': user.uid, 'alias': user.alias, 'isReady': true},
         maxPlayers: _maxPlayers,
         isPublic: _isPublic,
       );
-      // Navigate to the lobby for the newly created room
       NavigationService.pushReplacementNamed(LobbyScreen.routeName, arguments: {'roomCode': roomCode});
     } catch (e) {
       if (mounted) {
@@ -56,32 +54,43 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Crear Sala de Juego'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: 16),
-            // Max Players Selector
-            _buildDropdown(),
-            const SizedBox(height: 24),
-            // Public/Private Switch
-            _buildSwitch(),
-            const Spacer(),
-            // Create Button
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : ElevatedButton(
-                    onPressed: _createAndJoinRoom,
-                    style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                    child: const Text('Crear y Entrar'),
-                  ),
-            const SizedBox(height: 16),
-          ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Configura tu partida',
+                  style: theme.textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+                _buildDropdown(),
+                const SizedBox(height: 24),
+                _buildSwitch(),
+                const SizedBox(height: 48),
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: _createAndJoinRoom,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          textStyle: theme.textTheme.titleLarge,
+                        ),
+                        child: const Text('Crear y Entrar'),
+                      ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -89,7 +98,7 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
 
   Widget _buildDropdown() {
     return DropdownButtonFormField<int>(
-      initialValue: _maxPlayers,
+      value: _maxPlayers,
       decoration: const InputDecoration(
         labelText: 'Número Máximo de Jugadores',
         border: OutlineInputBorder(),
@@ -109,14 +118,25 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
   }
 
   Widget _buildSwitch() {
-    return SwitchListTile.adaptive(
-      title: const Text('Sala Pública'),
-      subtitle: const Text('Si está activado, otros podrán ver y unirse a tu sala.'),
-      value: _isPublic,
-      onChanged: (newValue) {
-        setState(() => _isPublic = newValue);
-      },
-      contentPadding: const EdgeInsets.all(0),
+     return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+        ),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: SwitchListTile.adaptive(
+          title: const Text('Sala Pública'),
+          subtitle: const Text('Si está activado, tu sala será visible para todos.'),
+          value: _isPublic,
+          onChanged: (newValue) {
+            setState(() => _isPublic = newValue);
+          },
+        ),
+      ),
     );
   }
 }
