@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../services/user_service.dart';
 import '../services/navigation_service.dart';
+import '../services/theme_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/game_rooms_screen.dart';
 import '../screens/customize_avatar_screen.dart';
@@ -12,15 +13,32 @@ class MainLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // TODO: Podrías añadir un fondo de estrellas aquí
-          // Image.asset('assets/images/background_stars.png', fit: BoxFit.cover, width: double.infinity, height: double.infinity,),
-          _MainMenuContent(),
-          _BottomActionBar(),
-        ],
+      body: Consumer<ThemeService>(
+        builder: (context, themeService, child) {
+          final isDarkMode =
+              themeService.themeMode == ThemeMode.dark ||
+              (themeService.themeMode == ThemeMode.system &&
+                  MediaQuery.of(context).platformBrightness == Brightness.dark);
+
+          final backgroundImage = isDarkMode
+              ? 'assets/img/Backgound_darkMode.png'
+              : 'assets/img/Background_lightMode.png';
+
+          return Stack(
+            children: [
+              Image.asset(
+                backgroundImage,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+              ),
+              const _MainMenuContent(),
+              const _BottomActionBar(),
+            ],
+          );
+        },
       ),
     );
   }
@@ -37,7 +55,11 @@ class _MainMenuContent extends StatelessWidget {
       fontWeight: FontWeight.bold,
       letterSpacing: 4,
       shadows: [
-        const Shadow(blurRadius: 10.0, color: Colors.white, offset: Offset(0, 0)),
+        const Shadow(
+          blurRadius: 10.0,
+          color: Colors.white,
+          offset: Offset(0, 0),
+        ),
       ],
     );
 
@@ -53,15 +75,23 @@ class _MainMenuContent extends StatelessWidget {
             // Menu Buttons
             _MainMenuButton(
               text: 'EN LÍNEA',
-              onPressed: () => NavigationService.push(GameRoomsScreen.routeName),
+              onPressed: () =>
+                  NavigationService.push(GameRoomsScreen.routeName),
             ),
             const SizedBox(height: 20),
             _MainMenuButton(
               text: 'PERSONALIZAR',
               onPressed: () {
-                final userService = Provider.of<UserService>(context, listen: false);
-                final character = userService.currentUser?.selectedCharacter ?? 'robot.glb';
-                NavigationService.push(CustomizeAvatarScreen.routeName, arguments: {'characterFile': character});
+                final userService = Provider.of<UserService>(
+                  context,
+                  listen: false,
+                );
+                final character =
+                    userService.currentUser?.selectedCharacter ?? 'robot.glb';
+                NavigationService.push(
+                  CustomizeAvatarScreen.routeName,
+                  arguments: {'characterFile': character},
+                );
               },
             ),
             const Spacer(flex: 2),
@@ -96,9 +126,7 @@ class _MainMenuButton extends StatelessWidget {
           border: Border.all(color: Colors.white, width: 3),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Center(
-          child: Text(text, style: buttonTextStyle),
-        ),
+        child: Center(child: Text(text, style: buttonTextStyle)),
       ),
     );
   }
@@ -116,11 +144,24 @@ class _BottomActionBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _RoundIconButton(icon: Icons.settings, onPressed: () => NavigationService.push(SettingsScreen.routeName)),
+            _RoundIconButton(
+              icon: Icons.settings,
+              onPressed: () => NavigationService.push(SettingsScreen.routeName),
+            ),
             const SizedBox(width: 20),
-            _RoundIconButton(icon: Icons.person, onPressed: () { /* TODO: Perfil de usuario */ }),
+            _RoundIconButton(
+              icon: Icons.person,
+              onPressed: () {
+                /* TODO: Perfil de usuario */
+              },
+            ),
             const SizedBox(width: 20),
-            _RoundIconButton(icon: Icons.store, onPressed: () { /* TODO: Tienda */ }),
+            _RoundIconButton(
+              icon: Icons.store,
+              onPressed: () {
+                /* TODO: Tienda */
+              },
+            ),
           ],
         ),
       ),
