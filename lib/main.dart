@@ -41,6 +41,7 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   runApp(const TodosMientenApp());
 }
 
@@ -70,22 +71,35 @@ class _TodosMientenAppState extends State<TodosMientenApp> {
       // Handle exception
     }
 
-    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-      _handleIncomingLink(uri);
-    }, onError: (err) {
-      // Handle exception
-    });
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (uri) {
+        _handleIncomingLink(uri);
+      },
+      onError: (err) {
+        // Handle exception
+      },
+    );
   }
 
   void _handleIncomingLink(Uri uri) {
-    if (uri.path.startsWith('/join') && uri.queryParameters.containsKey('room')) {
+    if (uri.path.startsWith('/join') &&
+        uri.queryParameters.containsKey('room')) {
       final roomCode = uri.queryParameters['room'];
-      final userService = Provider.of<UserService>(NavigationService.navigatorKey.currentContext!, listen: false);
+      final userService = Provider.of<UserService>(
+        NavigationService.navigatorKey.currentContext!,
+        listen: false,
+      );
 
       if (userService.hasUser) {
-        NavigationService.push(LobbyScreen.routeName, arguments: {'roomCode': roomCode});
+        NavigationService.push(
+          LobbyScreen.routeName,
+          arguments: {'roomCode': roomCode},
+        );
       } else {
-        NavigationService.push(AliasRedirectScreen.routeName, arguments: {'roomCode': roomCode});
+        NavigationService.push(
+          AliasRedirectScreen.routeName,
+          arguments: {'roomCode': roomCode},
+        );
       }
     }
   }
@@ -138,7 +152,9 @@ class FirebaseInitializer extends StatefulWidget {
 class _FirebaseInitializerState extends State<FirebaseInitializer> {
   Future<FirebaseApp?> _initializeFirebase() async {
     try {
-      return await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      return await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
     } on FirebaseException catch (e) {
       if (e.code == 'duplicate-app') {
         return Firebase.app();
@@ -153,7 +169,11 @@ class _FirebaseInitializerState extends State<FirebaseInitializer> {
       future: _initializeFirebase(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Scaffold(body: Center(child: Text("Error al inicializar Firebase: ${snapshot.error}")));
+          return Scaffold(
+            body: Center(
+              child: Text("Error al inicializar Firebase: ${snapshot.error}"),
+            ),
+          );
         }
         if (snapshot.connectionState == ConnectionState.done) {
           return const HomeScreen();
@@ -170,7 +190,8 @@ class AliasRedirectScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
     final roomCode = args?['roomCode'];
     return AliasScreen(roomCodeToJoin: roomCode);
   }
@@ -199,7 +220,9 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       break;
     case CustomizeAvatarScreen.routeName:
       final args = settings.arguments as Map<String, dynamic>?;
-      page = CustomizeAvatarScreen(characterFile: args?['characterFile'] ?? 'robot.glb');
+      page = CustomizeAvatarScreen(
+        characterFile: args?['characterFile'] ?? 'robot.glb',
+      );
       break;
     case DayClueScreen.routeName:
       page = const DayClueScreen();

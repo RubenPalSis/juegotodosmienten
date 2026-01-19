@@ -18,7 +18,7 @@ class ShopScreen extends StatelessWidget {
                 MediaQuery.of(context).platformBrightness == Brightness.dark);
 
         final fabBackgroundColor = isDarkMode ? Colors.black : Colors.white;
-        final fabIconColor = isDarkMode ? Colors.red : Colors.lightBlue;
+        final fabIconColor = isDarkMode ? Colors.white : Colors.black;
 
         final backgroundImage = isDarkMode
             ? 'assets/img/Backgound_darkMode.png'
@@ -26,12 +26,6 @@ class ShopScreen extends StatelessWidget {
 
         return Scaffold(
           backgroundColor: Colors.transparent,
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => Navigator.of(context).pop(),
-            backgroundColor: fabBackgroundColor,
-            child: Icon(Icons.arrow_back, color: fabIconColor),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
           body: Stack(
             children: [
               Image.asset(
@@ -42,6 +36,15 @@ class ShopScreen extends StatelessWidget {
               ),
               const Center(
                 child: Text('Próximamente: ¡Tienda de personajes y objetos!'),
+              ),
+              Positioned(
+                top: 20,
+                left: 20,
+                child: FloatingActionButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  backgroundColor: fabBackgroundColor,
+                  child: Icon(Icons.arrow_back, color: fabIconColor),
+                ),
               ),
             ],
           ),
