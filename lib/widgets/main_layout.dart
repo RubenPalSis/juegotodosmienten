@@ -96,6 +96,7 @@ class _MainMenuContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final userService = Provider.of<UserService>(context);
 
     final titleShadowColor = isDarkMode
         ? Colors.lightBlueAccent
@@ -146,10 +147,59 @@ class _MainMenuContent extends StatelessWidget {
                   // TODO: Implement local play
                 },
               ),
+              const SizedBox(height: 25),
+              // Coins
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _CoinDisplay(
+                    icon: 'assets/img/bronze_coin.png',
+                    amount: userService.currentUser?.bronzeCoins ?? 0,
+                  ),
+                  const SizedBox(width: 20),
+                  _CoinDisplay(
+                    icon: 'assets/img/gold_coin.png',
+                    amount: userService.currentUser?.goldCoins ?? 0,
+                  ),
+                ],
+              ),
               const Spacer(flex: 3),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CoinDisplay extends StatelessWidget {
+  final String icon;
+  final int amount;
+
+  const _CoinDisplay({required this.icon, required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          Image.asset(icon, width: 24, height: 24),
+          const SizedBox(width: 8),
+          Text(
+            '$amount',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

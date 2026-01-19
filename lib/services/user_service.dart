@@ -60,6 +60,8 @@ class UserService with ChangeNotifier {
       alias: _currentUser!.alias,
       totalExp: newExp,
       selectedCharacter: _currentUser!.selectedCharacter,
+      goldCoins: _currentUser!.goldCoins,
+      bronzeCoins: _currentUser!.bronzeCoins,
     );
     _calculateLevel();
     notifyListeners();
@@ -69,15 +71,40 @@ class UserService with ChangeNotifier {
     if (_currentUser == null) return;
 
     await _dbService.updateSelectedCharacter(characterFile);
-    
+
     _currentUser = user_model.User(
       id: _currentUser!.id,
       uid: _currentUser!.uid,
       alias: _currentUser!.alias,
       totalExp: _currentUser!.totalExp,
       selectedCharacter: characterFile,
+      goldCoins: _currentUser!.goldCoins,
+      bronzeCoins: _currentUser!.bronzeCoins,
     );
     notifyListeners();
+  }
+
+  Future<bool> exchangeBronzeForGold(int bronzeAmount, int goldAmount) async {
+    if (_currentUser == null || _currentUser!.bronzeCoins < bronzeAmount) {
+      return false;
+    }
+
+    final newBronzeCoins = _currentUser!.bronzeCoins - bronzeAmount;
+    final newGoldCoins = _currentUser!.goldCoins + goldAmount;
+
+    await _dbService.updateUserCoins(newGoldCoins, newBronzeCoins);
+
+    _currentUser = user_model.User(
+      id: _currentUser!.id,
+      uid: _currentUser!.uid,
+      alias: _currentUser!.alias,
+      totalExp: _currentUser!.totalExp,
+      selectedCharacter: _currentUser!.selectedCharacter,
+      goldCoins: newGoldCoins,
+      bronzeCoins: newBronzeCoins,
+    );
+    notifyListeners();
+    return true;
   }
 
   void _calculateLevel() {

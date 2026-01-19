@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import './email_service.dart';
+import './database_service.dart';
 
 class AuthService with ChangeNotifier {
   String? _userEmail;
   bool _isEmailVerified = false;
+  final DatabaseService _dbService = DatabaseService();
 
   // Claves para SharedPreferences
   static const String _emailKey = 'user_email';
@@ -86,28 +88,28 @@ class AuthService with ChangeNotifier {
       }
       await prefs.setBool(_verifiedKey, _isEmailVerified);
     } catch (e) {
-        if (kDebugMode) {
-            print('❌ Error guardando en SharedPreferences: $e');
-        }
+      if (kDebugMode) {
+        print('❌ Error guardando en SharedPreferences: $e');
+      }
     }
   }
 
   /// Cargar email vinculado desde el almacenamiento local
   Future<void> loadLinkedEmail() async {
     try {
-        final prefs = await SharedPreferences.getInstance();
-        _userEmail = prefs.getString(_emailKey);
-        _isEmailVerified = prefs.getBool(_verifiedKey) ?? false;
-        if (_userEmail != null) {
-            if (kDebugMode) {
-                print('📧 Email cargado desde SharedPreferences: $_userEmail');
-            }
-            notifyListeners();
-        }
-    } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      _userEmail = prefs.getString(_emailKey);
+      _isEmailVerified = prefs.getBool(_verifiedKey) ?? false;
+      if (_userEmail != null) {
         if (kDebugMode) {
-            print('❌ Error cargando desde SharedPreferences: $e');
+          print('📧 Email cargado desde SharedPreferences: $_userEmail');
         }
+        notifyListeners();
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error cargando desde SharedPreferences: $e');
+      }
     }
   }
 
@@ -131,5 +133,11 @@ class AuthService with ChangeNotifier {
       }
       return false;
     }
+  }
+
+  Future<void> signOut() async {
+    await unlinkEmail();
+    await _dbService.deleteDatabase();
+    notifyListeners();
   }
 }
