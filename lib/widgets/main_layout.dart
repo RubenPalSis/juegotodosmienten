@@ -7,6 +7,7 @@ import '../services/theme_service.dart';
 import '../screens/settings_screen.dart';
 import '../screens/game_rooms_screen.dart';
 import '../screens/customize_avatar_screen.dart';
+import '../screens/shop_screen.dart';
 
 class MainLayout extends StatelessWidget {
   const MainLayout({super.key});
@@ -35,7 +36,46 @@ class MainLayout extends StatelessWidget {
                 height: double.infinity,
               ),
               const _MainMenuContent(),
-              const _BottomActionBar(),
+              Positioned(
+                right: 20,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _CircularIconButton(
+                        icon: Icons.settings,
+                        onPressed: () =>
+                            NavigationService.push(SettingsScreen.routeName),
+                      ),
+                      const SizedBox(height: 20),
+                      _CircularIconButton(
+                        icon: Icons.person,
+                        onPressed: () {
+                          final userService = Provider.of<UserService>(
+                            context,
+                            listen: false,
+                          );
+                          final character =
+                              userService.currentUser?.selectedCharacter ??
+                                  'robot.glb';
+                          NavigationService.push(
+                            CustomizeAvatarScreen.routeName,
+                            arguments: {'characterFile': character},
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      _CircularIconButton(
+                        icon: Icons.store,
+                        onPressed: () =>
+                            NavigationService.push(ShopScreen.routeName),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           );
         },
@@ -50,15 +90,24 @@ class _MainMenuContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    final titleShadowColor = isDarkMode ? Colors.lightBlueAccent : Colors.blue.shade900;
+
     final titleStyle = theme.textTheme.displayLarge?.copyWith(
       color: Colors.white,
       fontWeight: FontWeight.bold,
-      letterSpacing: 4,
+      letterSpacing: 6,
       shadows: [
-        const Shadow(
-          blurRadius: 10.0,
-          color: Colors.white,
-          offset: Offset(0, 0),
+        Shadow(
+          blurRadius: 15.0,
+          color: titleShadowColor,
+          offset: const Offset(0, 0),
+        ),
+        Shadow(
+          blurRadius: 30.0,
+          color: titleShadowColor.withOpacity(0.7),
+          offset: const Offset(0, 0),
         ),
       ],
     );
@@ -71,30 +120,23 @@ class _MainMenuContent extends StatelessWidget {
             const Spacer(flex: 2),
             // Game Title
             Text('TODOS MIENTEN', style: titleStyle),
-            const Spacer(flex: 1),
+            const Spacer(flex: 2),
             // Menu Buttons
             _MainMenuButton(
               text: 'EN LÍNEA',
+              icon: Icons.wifi_tethering,
               onPressed: () =>
                   NavigationService.push(GameRoomsScreen.routeName),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 25),
             _MainMenuButton(
-              text: 'PERSONALIZAR',
+              text: 'JUGAR EN LOCAL',
+              icon: Icons.people_alt_outlined,
               onPressed: () {
-                final userService = Provider.of<UserService>(
-                  context,
-                  listen: false,
-                );
-                final character =
-                    userService.currentUser?.selectedCharacter ?? 'robot.glb';
-                NavigationService.push(
-                  CustomizeAvatarScreen.routeName,
-                  arguments: {'characterFile': character},
-                );
+                // TODO: Implement local play
               },
             ),
-            const Spacer(flex: 2),
+            const Spacer(flex: 3),
           ],
         ),
       ),
@@ -104,89 +146,66 @@ class _MainMenuContent extends StatelessWidget {
 
 class _MainMenuButton extends StatelessWidget {
   final String text;
+  final IconData icon;
   final VoidCallback onPressed;
 
-  const _MainMenuButton({required this.text, required this.onPressed});
+  const _MainMenuButton({required this.text, required this.icon, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final buttonTextStyle = theme.textTheme.headlineMedium?.copyWith(
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final backgroundColor = isDarkMode
+        ? Colors.black.withOpacity(0.3)
+        : Colors.white.withOpacity(0.2);
+    final borderColor = isDarkMode ? Colors.white60 : Colors.white;
+
+    final buttonTextStyle = theme.textTheme.headlineSmall?.copyWith(
       color: Colors.white,
       fontWeight: FontWeight.bold,
       letterSpacing: 2,
     );
 
-    return InkWell(
-      onTap: onPressed,
-      child: Container(
-        width: 350, // Ancho fijo para los botones
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.white, width: 3),
-          borderRadius: BorderRadius.circular(4),
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white, size: 28),
+      label: Text(text, style: buttonTextStyle),
+      style: ElevatedButton.styleFrom(
+        minimumSize: const Size(380, 70),
+        backgroundColor: backgroundColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: borderColor, width: 2),
         ),
-        child: Center(child: Text(text, style: buttonTextStyle)),
+        shadowColor: Colors.black.withOpacity(0.5),
+        elevation: 8,
       ),
     );
   }
 }
 
-class _BottomActionBar extends StatelessWidget {
-  const _BottomActionBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 24.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _RoundIconButton(
-              icon: Icons.settings,
-              onPressed: () => NavigationService.push(SettingsScreen.routeName),
-            ),
-            const SizedBox(width: 20),
-            _RoundIconButton(
-              icon: Icons.person,
-              onPressed: () {
-                /* TODO: Perfil de usuario */
-              },
-            ),
-            const SizedBox(width: 20),
-            _RoundIconButton(
-              icon: Icons.store,
-              onPressed: () {
-                /* TODO: Tienda */
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RoundIconButton extends StatelessWidget {
+class _CircularIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onPressed;
 
-  const _RoundIconButton({required this.icon, required this.onPressed});
+  const _CircularIconButton({required this.icon, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      customBorder: const CircleBorder(),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
-        ),
-        child: Icon(icon, color: Colors.white, size: 30),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDarkMode
+        ? Colors.black.withOpacity(0.4)
+        : Colors.white.withOpacity(0.25);
+
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, color: Colors.white, size: 34),
+      style: IconButton.styleFrom(
+        padding: const EdgeInsets.all(16),
+        shape: const CircleBorder(),
+        backgroundColor: backgroundColor,
+        side: BorderSide(color: Colors.white.withOpacity(0.7), width: 1),
       ),
     );
   }

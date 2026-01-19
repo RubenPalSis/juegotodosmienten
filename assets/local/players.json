@@ -1,0 +1,202 @@
+[
+  {
+    "id": 1,
+    "name": "Bot_Lobo"
+  },
+  {
+    "id": 2,
+    "name": "Bot_Sombra"
+  },
+  {
+    "id": 3,
+    "name": "Bot_Rayo"
+  },
+  {
+    "id": 4,
+    "name": "Bot_Furia"
+  },
+  {
+    "id": 5,
+    "name": "Bot_Cobra"
+  },
+  {
+    "id": 6,
+    "name": "Bot_Toro"
+  },
+  {
+    "id": 7,
+    "name": "Bot_Aguila"
+  },
+  {
+    "id": 8,
+    "name": "Bot_Fantasma"
+  },
+  {
+    "id": 9,
+    "name": "Bot_Brujo"
+  },
+  {
+    "id": 10,
+    "name": "Bot_Dragon"
+  },
+  {
+    "id": 11,
+    "name": "Bot_Cazador"
+  },
+  {
+    "id": 12,
+    "name": "Bot_Tormenta"
+  },
+  {
+    "id": 13,
+    "name": "Bot_Relampago"
+  },
+  {
+    "id": 14,
+    "name": "Bot_Centella"
+  },
+  {
+    "id": 15,
+    "name": "Bot_Espectro"
+  },
+  {
+    "id": 16,
+    "name": "Bot_Halcon"
+  },
+  {
+    "id": 17,
+    "name": "Bot_Cometa"
+  },
+  {
+    "id": 18,
+    "name": "Bot_Acero"
+  },
+  {
+    "id": 19,
+    "name": "Bot_Guardian"
+  },
+  {
+    "id": 20,
+    "name": "Bot_Letal"
+  },
+  {
+    "id": 21,
+    "name": "Bot_Kraken"
+  },
+  {
+    "id": 22,
+    "name": "Bot_Titan"
+  },
+  {
+    "id": 23,
+    "name": "Bot_Ciclon"
+  },
+  {
+    "id": 24,
+    "name": "Bot_Vortice"
+  },
+  {
+    "id": 25,
+    "name": "Bot_Quimera"
+  },
+  {
+    "id": 26,
+    "name": "Bot_Blaze"
+  },
+  {
+    "id": 27,
+    "name": "Bot_Shadow"
+  },
+  {
+    "id": 28,
+    "name": "Bot_Storm"
+  },
+  {
+    "id": 29,
+    "name": "Bot_Fury"
+  },
+  {
+    "id": 30,
+    "name": "Bot_Viper"
+  },
+  {
+    "id": 31,
+    "name": "Bot_Raptor"
+  },
+  {
+    "id": 32,
+    "name": "Bot_Ghost"
+  },
+  {
+    "id": 33,
+    "name": "Bot_Warlock"
+  },
+  {
+    "id": 34,
+    "name": "Bot_Dragon"
+  },
+  {
+    "id": 35,
+    "name": "Bot_Hunter"
+  },
+  {
+    "id": 36,
+    "name": "Bot_Lightning"
+  },
+  {
+    "id": 37,
+    "name": "Bot_Thunder"
+  },
+  {
+    "id": 38,
+    "name": "Bot_Specter"
+  },
+  {
+    "id": 39,
+    "name": "Bot_Falcon"
+  },
+  {
+    "id": 40,
+    "name": "Bot_Comet"
+  },
+  {
+    "id": 41,
+    "name": "Bot_Steel"
+  },
+  {
+    "id": 42,
+    "name": "Bot_Guardian"
+  },
+  {
+    "id": 43,
+    "name": "Bot_Lethal"
+  },
+  {
+    "id": 44,
+    "name": "Bot_Kraken"
+  },
+  {
+    "id": 45,
+    "name": "Bot_Titan"
+  },
+  {
+    "id": 46,
+    "name": "Bot_Cyclone"
+  },
+  {
+    "id": 47,
+    "name": "Bot_Vortex"
+  },
+  {
+    "id": 48,
+    "name": "Bot_Chimera"
+  },
+  {
+    "id": 49,
+    "name": "Bot_Maverick"
+  },
+  {
+    "id": 50,
+    "name": "Bot_Jester"
+  }
+]

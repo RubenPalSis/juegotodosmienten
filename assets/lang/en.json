@@ -19,7 +19,6 @@
   "winners": "Winners: [TEAM]",
   "back_to_home": "Back to Home",
   "character_catalog_title": "Character Catalog",
-
   "language_spanish": "Spanish",
   "language_english": "English",
   "settings_title": "Settings",
@@ -31,5 +30,17 @@
   "settings_label_level": "Level",
   "settings_label_total_exp": "Total Experience",
   "settings_label_dark_mode": "Dark Mode",
-  "settings_button_save": "Save Changes"
+  "settings_button_save": "Save Changes",
+  "settings_section_general": "General",
+  "settings_section_account": "Account",
+  "settings_account_description": "Link your email to recover your progress on any device.",
+  "settings_label_email": "Email",
+  "settings_label_code": "Verification Code",
+  "settings_button_send_code": "Send Code",
+  "settings_button_verify": "Verify and Link",
+  "settings_email_sent": "A code has been sent to your email.",
+  "settings_email_link_success": "Email linked successfully!",
+  "settings_email_invalid": "Please enter a valid email address.",
+  "settings_email_link_error": "Error linking email. Please try again.",
+  "settings_code_invalid": "The code entered is not valid."
 }

@@ -19,7 +19,6 @@
   "winners": "Ganadores: [EQUIPO]",
   "back_to_home": "Volver al Inicio",
   "character_catalog_title": "Catálogo de Personajes",
-
   "language_spanish": "Español",
   "language_english": "Inglés",
   "settings_title": "Ajustes",
@@ -31,5 +30,17 @@
   "settings_label_level": "Nivel",
   "settings_label_total_exp": "Experiencia Total",
   "settings_label_dark_mode": "Modo Oscuro",
-  "settings_button_save": "Guardar Cambios"
+  "settings_button_save": "Guardar Cambios",
+  "settings_section_general": "General",
+  "settings_section_account": "Cuenta",
+  "settings_account_description": "Vincula tu correo para poder recuperar tu progreso en cualquier dispositivo.",
+  "settings_label_email": "Correo Electrónico",
+  "settings_label_code": "Código de Verificación",
+  "settings_button_send_code": "Enviar Código",
+  "settings_button_verify": "Verificar y Vincular",
+  "settings_email_sent": "Se ha enviado un código a tu correo.",
+  "settings_email_link_success": "¡Correo vinculado con éxito!",
+  "settings_email_invalid": "Por favor, introduce un correo electrónico válido.",
+  "settings_email_link_error": "Error al vincular el correo. Inténtalo de nuevo.",
+  "settings_code_invalid": "El código introducido no es válido."
 }

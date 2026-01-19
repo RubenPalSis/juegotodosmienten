@@ -15,7 +15,7 @@ dependencies:
   firebase_core: ^2.32.0
   firebase_auth: ^4.20.0
   cloud_firestore: ^4.17.5
-
+  mailer: ^6.1.0
   # State Management & Services
   provider: ^6.0.0
   shared_preferences: ^2.2.3

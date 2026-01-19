@@ -19,10 +19,12 @@ import 'screens/night_action_screen.dart';
 import 'screens/role_screen.dart';
 import 'screens/round_result_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/shop_screen.dart';
 import 'screens/vote_screen.dart';
 
 // Services
 import 'services/app_localizations.dart';
+import 'services/auth_service.dart';
 import 'services/character_service.dart';
 import 'services/firestore_service.dart';
 import 'services/language_service.dart';
@@ -101,6 +103,7 @@ class _TodosMientenAppState extends State<TodosMientenApp> {
         Provider(create: (_) => ProfanityFilterService()),
         Provider(create: (_) => FirestoreService()),
         Provider(create: (_) => CharacterService()),
+        ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => LanguageService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
         ChangeNotifierProvider(create: (_) => UserService()),
@@ -218,6 +221,9 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       break;
     case AliasScreen.routeName:
       page = const AliasScreen();
+      break;
+    case ShopScreen.routeName:
+      page = const ShopScreen();
       break;
     default:
       page = const Scaffold(body: Center(child: Text('Page not found')));

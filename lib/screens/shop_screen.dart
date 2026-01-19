@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../services/theme_service.dart';
 
-class CustomizeAvatarScreen extends StatelessWidget {
-  static const routeName = '/customize-avatar';
-  final String characterFile;
+class ShopScreen extends StatelessWidget {
+  static const routeName = '/shop';
 
-  const CustomizeAvatarScreen({super.key, required this.characterFile});
+  const ShopScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,26 +40,8 @@ class CustomizeAvatarScreen extends StatelessWidget {
                 width: double.infinity,
                 height: double.infinity,
               ),
-              Column(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: ModelViewer(
-                      src: 'assets/models/$characterFile',
-                      alt: "Avatar Preview",
-                      autoRotate: true,
-                      cameraControls: true,
-                      environmentImage: 'neutral',
-                      backgroundColor: Colors.transparent,
-                    ),
-                  ),
-                  const Expanded(
-                    flex: 2,
-                    child: Center(
-                      child: Text('Aquí irán las opciones de personalización'),
-                    ),
-                  ),
-                ],
+              const Center(
+                child: Text('Próximamente: ¡Tienda de personajes y objetos!'),
               ),
             ],
           ),
