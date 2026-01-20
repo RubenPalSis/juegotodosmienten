@@ -37,11 +37,11 @@ class UserService with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> createUser(String alias) async {
+  Future<void> createUser(String alias, String uid) async {
     _isLoading = true;
     notifyListeners();
 
-    await _firestoreService.createUser(alias);
+    await _firestoreService.createUser(alias, uid);
     _currentUser = await _firestoreService.getUserByAlias(alias);
 
     final prefs = await SharedPreferences.getInstance();
@@ -55,15 +55,23 @@ class UserService with ChangeNotifier {
     if (_currentUser != null) {
       await _firestoreService.updateUserEmail(_currentUser!.alias, email);
       // Actualizar el estado local
-      _currentUser = await _firestoreService.getUserByAlias(_currentUser!.alias);
+      _currentUser = await _firestoreService.getUserByAlias(
+        _currentUser!.alias,
+      );
       notifyListeners();
     }
   }
 
   Future<void> updateUserCoins({int? gold, int? bronze}) async {
     if (_currentUser != null) {
-      await _firestoreService.updateUserCoins(_currentUser!.alias, gold: gold, bronze: bronze);
-      _currentUser = await _firestoreService.getUserByAlias(_currentUser!.alias);
+      await _firestoreService.updateUserCoins(
+        _currentUser!.alias,
+        gold: gold,
+        bronze: bronze,
+      );
+      _currentUser = await _firestoreService.getUserByAlias(
+        _currentUser!.alias,
+      );
       notifyListeners();
     }
   }
@@ -78,7 +86,7 @@ class UserService with ChangeNotifier {
     await _firestoreService.updateUserCoins(
       _currentUser!.alias,
       bronze: -bronzeAmount, // Resta bronce
-      gold: goldAmount,       // Suma oro
+      gold: goldAmount, // Suma oro
     );
 
     // Refresca los datos del usuario para que la UI se actualice

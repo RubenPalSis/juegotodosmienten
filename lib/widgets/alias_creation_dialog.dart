@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/user_service.dart';
 import '../services/firestore_service.dart';
 import '../services/profanity_filter_service.dart';
+import '../services/auth_service.dart';
 import '../utils/ui_helpers.dart';
 
 class AliasCreationDialog extends StatefulWidget {
@@ -24,34 +25,61 @@ class _AliasCreationDialogState extends State<AliasCreationDialog> {
     setState(() => _isLoading = true);
 
     final alias = _aliasController.text.trim();
-    final profanityFilter = Provider.of<ProfanityFilterService>(context, listen: false);
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final profanityFilter = Provider.of<ProfanityFilterService>(
+      context,
+      listen: false,
+    );
+    final firestoreService = Provider.of<FirestoreService>(
+      context,
+      listen: false,
+    );
     final userService = Provider.of<UserService>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
 
     try {
       // 1. Comprobar si el nombre no es permitido
       if (profanityFilter.isProfane(alias)) {
-        if (mounted) showCustomSnackBar(context, 'Este nombre no está permitido. Por favor, elige otro.', isError: true);
+        if (mounted)
+          showCustomSnackBar(
+            context,
+            'Este nombre no está permitido. Por favor, elige otro.',
+            isError: true,
+          );
         return;
       }
 
-      // 2. Comprobar si el alias ya existe
+      // 2. Authenticate anonymously before any Firestore operation
+      final user = await authService.signInAnonymously();
+      if (user == null) {
+        throw Exception('Error de autenticación anónima.');
+      }
+
+      // 3. Comprobar si el alias ya existe
       final isTaken = await firestoreService.getUserByAlias(alias) != null;
       if (isTaken) {
-        if (mounted) showCustomSnackBar(context, 'Este alias ya está en uso. Por favor, elige otro.', isError: true);
+        if (mounted)
+          showCustomSnackBar(
+            context,
+            'Este alias ya está en uso. Por favor, elige otro.',
+            isError: true,
+          );
         return;
       }
 
-      // 3. Si todo es correcto, crear el usuario.
-      await userService.createUser(alias);
+      // 4. Si todo es correcto, crear el usuario.
+      await userService.createUser(alias, user.uid);
 
-      // 4. Cerrar el diálogo si el usuario se creó correctamente.
+      // 5. Cerrar el diálogo si el usuario se creó correctamente.
       if (mounted) {
         Navigator.of(context).pop();
       }
-
     } catch (e) {
-      if (mounted) showCustomSnackBar(context, 'Error al crear el usuario: $e', isError: true);
+      if (mounted)
+        showCustomSnackBar(
+          context,
+          'Error al crear el usuario: $e',
+          isError: true,
+        );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -68,17 +96,26 @@ class _AliasCreationDialogState extends State<AliasCreationDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('¡Bienvenido a Todos Mienten!', textAlign: TextAlign.center),
+      title: const Text(
+        '¡Bienvenido a Todos Mienten!',
+        textAlign: TextAlign.center,
+      ),
       content: SingleChildScrollView(
         child: ListBody(
           children: <Widget>[
-            const Text('Elige un alias para empezar a jugar', textAlign: TextAlign.center),
+            const Text(
+              'Elige un alias para empezar a jugar',
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 24),
             Form(
               key: _formKey,
               child: TextFormField(
                 controller: _aliasController,
-                decoration: const InputDecoration(labelText: 'Alias', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Alias',
+                  border: OutlineInputBorder(),
+                ),
                 textInputAction: TextInputAction.done,
                 onFieldSubmitted: (_) => _isLoading ? null : _submitAlias(),
                 validator: (value) {
@@ -97,10 +134,12 @@ class _AliasCreationDialogState extends State<AliasCreationDialog> {
       ),
       actions: <Widget>[
         _isLoading
-            ? const Center(child: Padding(
-              padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(),
-            ))
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             : TextButton(
                 onPressed: _submitAlias,
                 child: const Text('Guardar y Entrar'),

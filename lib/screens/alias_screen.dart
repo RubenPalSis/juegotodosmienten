@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:juegotodosmienten/services/user_service.dart';
 import 'package:juegotodosmienten/services/firestore_service.dart';
+import 'package:juegotodosmienten/services/auth_service.dart';
 import 'package:juegotodosmienten/utils/ui_helpers.dart';
 import 'home_screen.dart';
 import 'lobby_screen.dart';
@@ -21,37 +23,76 @@ class _AliasScreenState extends State<AliasScreen> {
   final _aliasController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.dispose();
+  }
+
   Future<void> _submitAlias() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isLoading = true);
 
     final alias = _aliasController.text.trim();
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final firestoreService = Provider.of<FirestoreService>(
+      context,
+      listen: false,
+    );
+    final authService = Provider.of<AuthService>(context, listen: false);
 
     try {
+      // Authenticate anonymously before any Firestore operation
+      final user = await authService.signInAnonymously();
+      if (user == null) {
+        throw Exception('Error de autenticación anónima.');
+      }
+
       final isTaken = await firestoreService.getUserByAlias(alias) != null;
       if (isTaken) {
         if (mounted) {
-          showCustomSnackBar(context, 'Este alias ya está en uso.', isError: true);
+          showCustomSnackBar(
+            context,
+            'Este alias ya está en uso.',
+            isError: true,
+          );
         }
         return;
       }
 
       final userService = Provider.of<UserService>(context, listen: false);
-      await userService.createUser(alias);
+      await userService.createUser(alias, user.uid);
 
       if (mounted) {
         // Navegar a la pantalla correcta después de crear el usuario.
         if (widget.roomCodeToJoin != null) {
-          Navigator.of(context).pushReplacementNamed(LobbyScreen.routeName, arguments: {'roomCode': widget.roomCodeToJoin});
+          Navigator.of(context).pushReplacementNamed(
+            LobbyScreen.routeName,
+            arguments: {'roomCode': widget.roomCodeToJoin},
+          );
         } else {
           Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
         }
       }
     } catch (e) {
       if (mounted) {
-        showCustomSnackBar(context, 'Error al crear el usuario: $e', isError: true);
+        showCustomSnackBar(
+          context,
+          'Error al crear el usuario: $e',
+          isError: true,
+        );
       }
     } finally {
       if (mounted) {
@@ -79,7 +120,9 @@ class _AliasScreenState extends State<AliasScreen> {
                 children: [
                   Text(
                     '¡Bienvenido a Todos Mienten!',
-                    style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),

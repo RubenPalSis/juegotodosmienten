@@ -45,38 +45,42 @@ class MainLayout extends StatelessWidget {
                   top: 0,
                   bottom: 0,
                   child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _CircularIconButton(
-                          icon: Icons.settings,
-                          onPressed: () =>
-                              NavigationService.push(SettingsScreen.routeName),
-                        ),
-                        const SizedBox(height: 20),
-                        _CircularIconButton(
-                          icon: Icons.person,
-                          onPressed: () {
-                            final userService = Provider.of<UserService>(
-                              context,
-                              listen: false,
-                            );
-                            final character =
-                                userService.currentUser?.selectedCharacter ??
-                                'robot.glb';
-                            NavigationService.push(
-                              CustomizeAvatarScreen.routeName,
-                              arguments: {'characterFile': character},
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 20),
-                        _CircularIconButton(
-                          icon: Icons.store,
-                          onPressed: () =>
-                              NavigationService.push(ShopScreen.routeName),
-                        ),
-                      ],
+                    child: SingleChildScrollView(
+                      // Added to prevent overflow
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _CircularIconButton(
+                            icon: Icons.settings,
+                            onPressed: () => NavigationService.push(
+                              SettingsScreen.routeName,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          _CircularIconButton(
+                            icon: Icons.person,
+                            onPressed: () {
+                              final userService = Provider.of<UserService>(
+                                context,
+                                listen: false,
+                              );
+                              final character =
+                                  userService.currentUser?.selectedCharacter ??
+                                  'robot.glb';
+                              NavigationService.push(
+                                CustomizeAvatarScreen.routeName,
+                                arguments: {'characterFile': character},
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          _CircularIconButton(
+                            icon: Icons.store,
+                            onPressed: () =>
+                                NavigationService.push(ShopScreen.routeName),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -102,70 +106,69 @@ class _MainMenuContent extends StatelessWidget {
         ? Colors.lightBlueAccent
         : Colors.blue.shade900;
 
-    return DefaultTextStyle(
-      style: theme.textTheme.displayLarge!,
-      child: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(flex: 2),
-              // Game Title
-              Text(
-                'TODOS MIENTEN',
-                style: theme.textTheme.displayLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 6,
-                  shadows: [
-                    Shadow(
-                      blurRadius: 15.0,
-                      color: titleShadowColor,
-                      offset: const Offset(0, 0),
-                    ),
-                    Shadow(
-                      blurRadius: 30.0,
-                      color: titleShadowColor.withOpacity(0.7),
-                      offset: const Offset(0, 0),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(flex: 2),
-              // Menu Buttons
-              _MainMenuButton(
-                text: 'EN LÍNEA',
-                icon: Icons.wifi_tethering,
-                onPressed: () =>
-                    NavigationService.push(GameRoomsScreen.routeName),
-              ),
-              const SizedBox(height: 25),
-              _MainMenuButton(
-                text: 'JUGAR EN LOCAL',
-                icon: Icons.people_alt_outlined,
-                onPressed: () {
-                  // TODO: Implement local play
-                },
-              ),
-              const SizedBox(height: 25),
-              // Coins
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _CoinDisplay(
-                    icon: 'assets/img/bronze_coin.png',
-                    amount: userService.currentUser?.bronzeCoins ?? 0,
+    // Using ListView to avoid overflow on smaller screens
+    return SafeArea(
+      child: Center(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const SizedBox(height: 40),
+            // Game Title
+            Text(
+              'TODOS MIENTEN',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.displayLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 6,
+                shadows: [
+                  Shadow(
+                    blurRadius: 15.0,
+                    color: titleShadowColor,
+                    offset: const Offset(0, 0),
                   ),
-                  const SizedBox(width: 20),
-                  _CoinDisplay(
-                    icon: 'assets/img/gold_coin.png',
-                    amount: userService.currentUser?.goldCoins ?? 0,
+                  Shadow(
+                    blurRadius: 30.0,
+                    color: titleShadowColor.withOpacity(0.7),
+                    offset: const Offset(0, 0),
                   ),
                 ],
               ),
-              const Spacer(flex: 3),
-            ],
-          ),
+            ),
+            const SizedBox(height: 60),
+            // Menu Buttons
+            _MainMenuButton(
+              text: 'EN LÍNEA',
+              icon: Icons.wifi_tethering,
+              onPressed: () =>
+                  NavigationService.push(GameRoomsScreen.routeName),
+            ),
+            const SizedBox(height: 20),
+            _MainMenuButton(
+              text: 'JUGAR EN LOCAL',
+              icon: Icons.people_alt_outlined,
+              onPressed: () {
+                // TODO: Implement local play
+              },
+            ),
+            const SizedBox(height: 40),
+            // Coins
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _CoinDisplay(
+                  icon: 'assets/img/bronze_coin.png',
+                  amount: userService.currentUser?.bronzeCoins ?? 0,
+                ),
+                const SizedBox(width: 20),
+                _CoinDisplay(
+                  icon: 'assets/img/gold_coin.png',
+                  amount: userService.currentUser?.goldCoins ?? 0,
+                ),
+              ],
+            ),
+            const SizedBox(height: 40),
+          ],
         ),
       ),
     );
@@ -232,19 +235,21 @@ class _MainMenuButton extends StatelessWidget {
       letterSpacing: 2,
     );
 
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white, size: 28),
-      label: Text(text, style: buttonTextStyle),
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(380, 70),
-        backgroundColor: backgroundColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: borderColor, width: 2),
+    return Center(
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white, size: 28),
+        label: Text(text, style: buttonTextStyle),
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(380, 70),
+          backgroundColor: backgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: borderColor, width: 2),
+          ),
+          shadowColor: Colors.black.withOpacity(0.5),
+          elevation: 8,
         ),
-        shadowColor: Colors.black.withOpacity(0.5),
-        elevation: 8,
       ),
     );
   }

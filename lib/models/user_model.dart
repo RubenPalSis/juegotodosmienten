@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class User {
+  final String uid;
   final String alias;
   final String email;
   final int totalExp;
@@ -10,6 +11,7 @@ class User {
   final List<String> unlockedCharacters;
 
   User({
+    required this.uid,
     required this.alias,
     this.email = '',
     this.totalExp = 0,
@@ -22,18 +24,22 @@ class User {
   factory User.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return User(
+      uid: data['uid'],
       alias: doc.id,
       email: data['email'] ?? '',
       totalExp: data['totalExp'] ?? 0,
       goldCoins: data['gold_coins'] ?? 0,
       bronzeCoins: data['bronze_coins'] ?? 0,
       selectedCharacter: data['selectedCharacter'] ?? 'robot.glb',
-      unlockedCharacters: List<String>.from(data['unlockedCharacters'] ?? ['robot.glb']),
+      unlockedCharacters: List<String>.from(
+        data['unlockedCharacters'] ?? ['robot.glb'],
+      ),
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
+      'uid': uid,
       'email': email,
       'totalExp': totalExp,
       'gold_coins': goldCoins,

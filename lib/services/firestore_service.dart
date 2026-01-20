@@ -11,7 +11,8 @@ class FirestoreService {
   Future<void> updateUserCoins(String alias, {int? gold, int? bronze}) async {
     Map<String, dynamic> dataToUpdate = {};
     if (gold != null) dataToUpdate['gold_coins'] = FieldValue.increment(gold);
-    if (bronze != null) dataToUpdate['bronze_coins'] = FieldValue.increment(bronze);
+    if (bronze != null)
+      dataToUpdate['bronze_coins'] = FieldValue.increment(bronze);
 
     if (dataToUpdate.isNotEmpty) {
       await _db.collection('aliases').doc(alias).update(dataToUpdate);
@@ -28,9 +29,10 @@ class FirestoreService {
   }
 
   // Crear un nuevo usuario con valores iniciales
-  Future<void> createUser(String alias) async {
+  Future<void> createUser(String alias, String uid) async {
     final user = User(
       alias: alias,
+      uid: uid,
       email: '',
       totalExp: 0,
       goldCoins: 0,
@@ -132,10 +134,11 @@ class FirestoreService {
     }
   }
 
-
   // Actualizar el idioma del usuario
   Future<void> updateUserLanguage(String alias, String languageCode) async {
-    await _db.collection('aliases').doc(alias).update({'language': languageCode});
+    await _db.collection('aliases').doc(alias).update({
+      'language': languageCode,
+    });
   }
 
   // Actualizar el email del usuario
@@ -143,13 +146,16 @@ class FirestoreService {
     await _db.collection('aliases').doc(alias).update({'email': email});
   }
 
-   /// Devuelve un stream con los datos de una sala específica.
+  /// Devuelve un stream con los datos de una sala específica.
   Stream<DocumentSnapshot> getGameRoomStream(String roomCode) {
     return _db.collection('rooms').doc(roomCode).snapshots();
   }
 
   /// Permite a un jugador abandonar una sala.
-  Future<void> leaveGameRoom({required String roomCode, required String playerAlias}) async {
+  Future<void> leaveGameRoom({
+    required String roomCode,
+    required String playerAlias,
+  }) async {
     final roomRef = _db.collection('rooms').doc(roomCode);
     final playerRef = roomRef.collection('players').doc(playerAlias);
 
@@ -185,7 +191,11 @@ class FirestoreService {
   }
 
   /// Actualiza los ajustes de una sala (para el host).
-  Future<void> updateRoomSettings(String roomCode, {bool? isPublic, int? maxPlayers}) async {
+  Future<void> updateRoomSettings(
+    String roomCode, {
+    bool? isPublic,
+    int? maxPlayers,
+  }) async {
     final Map<String, dynamic> dataToUpdate = {};
     if (isPublic != null) dataToUpdate['isPublic'] = isPublic;
     if (maxPlayers != null) dataToUpdate['maxPlayers'] = maxPlayers;
@@ -212,18 +222,24 @@ class FirestoreService {
   }
 
   Stream<QuerySnapshot> getPlayersStream(String roomCode) {
-    return _db.collection('rooms').doc(roomCode).collection('players').snapshots();
+    return _db
+        .collection('rooms')
+        .doc(roomCode)
+        .collection('players')
+        .snapshots();
   }
 
   // Añadir un personaje desbloqueado
   Future<void> addUnlockedCharacter(String alias, String character) async {
     await _db.collection('aliases').doc(alias).update({
-      'unlockedCharacters': FieldValue.arrayUnion([character])
+      'unlockedCharacters': FieldValue.arrayUnion([character]),
     });
   }
 
   // Actualizar personaje seleccionado
   Future<void> updateSelectedCharacter(String alias, String character) async {
-    await _db.collection('aliases').doc(alias).update({'selectedCharacter': character});
+    await _db.collection('aliases').doc(alias).update({
+      'selectedCharacter': character,
+    });
   }
 }

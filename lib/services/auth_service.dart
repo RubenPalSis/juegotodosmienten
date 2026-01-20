@@ -1,10 +1,13 @@
-// services/auth_service.dart
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import './email_service.dart';
 
 class AuthService with ChangeNotifier {
+  final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+  auth.User? _firebaseUser;
+
   String? _userEmail;
   bool _isEmailVerified = false;
 
@@ -15,9 +18,35 @@ class AuthService with ChangeNotifier {
   // Getter para el email actual
   String? get userEmail => _userEmail;
   bool get isEmailVerified => _isEmailVerified;
+  auth.User? get firebaseUser => _firebaseUser;
 
   AuthService() {
     loadLinkedEmail();
+    _auth.authStateChanges().listen((user) {
+      _firebaseUser = user;
+      notifyListeners();
+    });
+  }
+
+  /// Sign in anonymously
+  Future<auth.User?> signInAnonymously() async {
+    try {
+      if (_auth.currentUser == null) {
+        final userCredential = await _auth.signInAnonymously();
+        _firebaseUser = userCredential.user;
+        if (kDebugMode) {
+          print("Signed in with temporary account.");
+        }
+        notifyListeners();
+        return _firebaseUser;
+      }
+      return _auth.currentUser;
+    } catch (e) {
+      if (kDebugMode) {
+        print("Failed to sign in anonymously: $e");
+      }
+      return null;
+    }
   }
 
   /// Envía código de verificación al email
