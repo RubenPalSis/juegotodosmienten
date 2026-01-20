@@ -1,28 +1,20 @@
-import 'package:flutter/material.dart';
-
-import '../models/user_model.dart' as user_model;
-import 'database_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import './firestore_service.dart';
+import '../models/user_model.dart';
 
 class UserService with ChangeNotifier {
-  final DatabaseService _dbService = DatabaseService();
-  user_model.User? _currentUser;
-  int _level = 1;
+  static const String _aliasKey = 'user_alias';
+
+  final FirestoreService _firestoreService = FirestoreService();
+  User? _currentUser;
   bool _isLoading = true;
 
-  // Constants
-  static const double expPerLevel = 150.0;
-
-  // Getters
-  user_model.User? get currentUser => _currentUser;
-  int get level => _level;
-  bool get hasUser => _currentUser != null;
+  User? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get hasUser => _currentUser != null;
 
-  double get expForNextLevel => expPerLevel;
-  double get expInCurrentLevel {
-    if (_currentUser == null) return 0;
-    return _currentUser!.totalExp % expPerLevel;
-  }
+  int get level => _calculateLevel(currentUser?.totalExp ?? 0);
 
   UserService() {
     loadUser();
@@ -32,83 +24,73 @@ class UserService with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    _currentUser = await _dbService.getUser();
-    if (_currentUser != null) {
-      _calculateLevel();
+    final prefs = await SharedPreferences.getInstance();
+    String? alias = prefs.getString(_aliasKey);
+
+    if (alias != null) {
+      _currentUser = await _firestoreService.getUserByAlias(alias);
+    } else {
+      _currentUser = null;
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
-  Future<void> createUser(String alias, String uid) async {
-    _currentUser = await _dbService.createUser(alias, uid);
-    _calculateLevel();
+  Future<void> createUser(String alias) async {
+    _isLoading = true;
+    notifyListeners();
+
+    await _firestoreService.createUser(alias);
+    _currentUser = await _firestoreService.getUserByAlias(alias);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_aliasKey, alias);
+
+    _isLoading = false;
     notifyListeners();
   }
 
-  Future<void> addExp(int amount) async {
-    if (_currentUser == null) return;
-
-    final newExp = _currentUser!.totalExp + amount;
-    await _dbService.updateUserExp(newExp);
-
-    // Update local state directly
-    _currentUser = user_model.User(
-      id: _currentUser!.id,
-      uid: _currentUser!.uid,
-      alias: _currentUser!.alias,
-      totalExp: newExp,
-      selectedCharacter: _currentUser!.selectedCharacter,
-      goldCoins: _currentUser!.goldCoins,
-      bronzeCoins: _currentUser!.bronzeCoins,
-    );
-    _calculateLevel();
-    notifyListeners();
+  Future<void> updateUserEmail(String email) async {
+    if (_currentUser != null) {
+      await _firestoreService.updateUserEmail(_currentUser!.alias, email);
+      // Actualizar el estado local
+      _currentUser = await _firestoreService.getUserByAlias(_currentUser!.alias);
+      notifyListeners();
+    }
   }
 
-  Future<void> updateCharacter(String characterFile) async {
-    if (_currentUser == null) return;
-
-    await _dbService.updateSelectedCharacter(characterFile);
-
-    _currentUser = user_model.User(
-      id: _currentUser!.id,
-      uid: _currentUser!.uid,
-      alias: _currentUser!.alias,
-      totalExp: _currentUser!.totalExp,
-      selectedCharacter: characterFile,
-      goldCoins: _currentUser!.goldCoins,
-      bronzeCoins: _currentUser!.bronzeCoins,
-    );
-    notifyListeners();
+  Future<void> updateUserCoins({int? gold, int? bronze}) async {
+    if (_currentUser != null) {
+      await _firestoreService.updateUserCoins(_currentUser!.alias, gold: gold, bronze: bronze);
+      _currentUser = await _firestoreService.getUserByAlias(_currentUser!.alias);
+      notifyListeners();
+    }
   }
 
+  /// Intercambia monedas de bronce por monedas de oro.
   Future<bool> exchangeBronzeForGold(int bronzeAmount, int goldAmount) async {
     if (_currentUser == null || _currentUser!.bronzeCoins < bronzeAmount) {
-      return false;
+      return false; // No tiene suficientes monedas
     }
 
-    final newBronzeCoins = _currentUser!.bronzeCoins - bronzeAmount;
-    final newGoldCoins = _currentUser!.goldCoins + goldAmount;
-
-    await _dbService.updateUserCoins(newGoldCoins, newBronzeCoins);
-
-    _currentUser = user_model.User(
-      id: _currentUser!.id,
-      uid: _currentUser!.uid,
-      alias: _currentUser!.alias,
-      totalExp: _currentUser!.totalExp,
-      selectedCharacter: _currentUser!.selectedCharacter,
-      goldCoins: newGoldCoins,
-      bronzeCoins: newBronzeCoins,
+    // Realiza el intercambio de forma atómica en la base de datos
+    await _firestoreService.updateUserCoins(
+      _currentUser!.alias,
+      bronze: -bronzeAmount, // Resta bronce
+      gold: goldAmount,       // Suma oro
     );
-    notifyListeners();
+
+    // Refresca los datos del usuario para que la UI se actualice
+    await loadUser();
     return true;
   }
 
-  void _calculateLevel() {
-    if (_currentUser == null) return;
-    _level = (_currentUser!.totalExp / expPerLevel).floor() + 1;
+  int _calculateLevel(int totalExp) {
+    if (totalExp < 100) return 1;
+    if (totalExp < 300) return 2;
+    if (totalExp < 600) return 3;
+    // ... y así sucesivamente
+    return 4;
   }
 }

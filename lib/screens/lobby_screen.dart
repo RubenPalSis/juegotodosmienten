@@ -5,7 +5,10 @@ import 'package:share_plus/share_plus.dart';
 
 import '../services/firestore_service.dart';
 import '../services/user_service.dart';
-import '../models/user_model.dart';
+import '../services/theme_service.dart';
+import '../utils/ui_helpers.dart';
+import '../widgets/player_avatar.dart';
+import 'home_screen.dart';
 
 class LobbyScreen extends StatefulWidget {
   static const routeName = '/lobby';
@@ -19,15 +22,6 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen> {
   String? _roomCode;
   final _chatController = TextEditingController();
-  late final UserService _userService;
-  late final FirestoreService _firestoreService;
-
-  @override
-  void initState() {
-    super.initState();
-    _userService = Provider.of<UserService>(context, listen: false);
-    _firestoreService = Provider.of<FirestoreService>(context, listen: false);
-  }
 
   @override
   void didChangeDependencies() {
@@ -38,13 +32,16 @@ class _LobbyScreenState extends State<LobbyScreen> {
     }
   }
 
-  Future<void> _leaveRoom() async {
-    final user = _userService.currentUser;
+  Future<void> _leaveRoomAndGoHome() async {
+    final user = Provider.of<UserService>(context, listen: false).currentUser;
     if (_roomCode != null && user != null) {
-      await _firestoreService.leaveGameRoom(roomCode: _roomCode!, userId: user.uid);
+      await Provider.of<FirestoreService>(context, listen: false).leaveGameRoom(roomCode: _roomCode!, playerAlias: user.alias);
+    }
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil(HomeScreen.routeName, (route) => false);
     }
   }
-  
+
   Future<bool> _onWillPop() async {
     final wannaLeave = await showDialog<bool>(
       context: context,
@@ -52,439 +49,123 @@ class _LobbyScreenState extends State<LobbyScreen> {
         title: const Text('¿Salir de la sala?'),
         content: const Text('¿Estás seguro de que quieres abandonar la sala?'),
         actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Quedarse')),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Quedarse'),
-          ),
-          TextButton(
-            onPressed: () async {
-              await _leaveRoom();
-              if (!mounted) return;
-              Navigator.of(context).pop(true);
-            },
+            onPressed: () => Navigator.of(context).pop(true),
             child: Text('Salir', style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),
     );
-    return wannaLeave ?? false;
+    if (wannaLeave ?? false) {
+      await _leaveRoomAndGoHome();
+      return false; // Evita que el `WillPopScope` haga un pop automático
+    }
+    return false;
   }
 
   void _shareInvitation() {
     if (_roomCode == null) return;
     final invitationLink = "https://todosmienten.app/join?room=$_roomCode";
-    final message = "¡Únete a mi partida en Todos Mienten!\n\nCódigo: $_roomCode\nO usa este enlace para unirte directamente: $invitationLink";
-    Share.share(message);
-  }
-
-  Future<void> _sendMessage() async {
-    if (_chatController.text.trim().isEmpty) return;
-
-    final user = _userService.currentUser;
-    final roomSnapshot = await _firestoreService.getGameRoomStream(_roomCode!).first;
-    final roomData = roomSnapshot.data() as Map<String, dynamic>?;
-    final players = roomData?['players'] as List<dynamic>? ?? [];
-    final currentPlayer = players.firstWhere((p) => p['uid'] == user?.uid, orElse: () => null);
-
-    if (user != null && currentPlayer != null) {
-      await _firestoreService.sendMessage(
-        roomCode: _roomCode!,
-        text: _chatController.text.trim(),
-        alias: user.alias,
-        uid: user.uid,
-        color: currentPlayer['color'],
-      );
-      _chatController.clear();
-    }
-  }
-
-  void _showInfoDialog(String title, String content) {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(content),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Aceptar'),
-              onPressed: () {
-                if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _chatController.dispose();
-    super.dispose();
+    Share.share("¡Únete a mi partida en Todos Mienten!\n\nCódigo: $_roomCode\nO usa este enlace para unirte directamente: $invitationLink");
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = _userService.currentUser;
-
     if (_roomCode == null) {
       return const Scaffold(body: Center(child: Text('Error: Código de sala no encontrado.')));
     }
 
-    return StreamBuilder<DocumentSnapshot>(
-      stream: _firestoreService.getGameRoomStream(_roomCode!),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.active && (!snapshot.hasData || snapshot.data?.data() == null)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _showInfoDialog('Sala Cerrada', 'La sala ha sido cerrada por el anfitrión o por inactividad.'));
-          return const Scaffold(body: Center(child: Text('La sala ha sido cerrada.')));
-        }
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final backgroundImage = isDarkMode ? 'assets/img/Backgound_darkMode.png' : 'assets/img/Background_lightMode.png';
 
-        if (!snapshot.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-
-        final roomData = snapshot.data!.data() as Map<String, dynamic>?;
-        if (roomData == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _showInfoDialog('Sala Cerrada', 'La sala ha sido cerrada.'));
-          return const Scaffold(body: Center(child: Text('La sala ha sido cerrada.')));
-        }
-
-        final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
-        final bannedUIDs = List<String>.from(roomData['bannedUIDs'] ?? []);
-
-        if (bannedUIDs.contains(currentUser?.uid)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _showInfoDialog('Has sido baneado', 'No puedes volver a entrar a esta sala.'));
-          return const Scaffold(body: Center(child: Text('Has sido baneado.')));
-        }
-
-        bool isKicked = players.every((p) => p['uid'] != currentUser?.uid);
-        if (isKicked && roomData['hostId'] != currentUser?.uid) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _showInfoDialog('Has sido expulsado', 'El anfitrión te ha expulsado de la sala.'));
-          return const Scaffold(body: Center(child: Text('Has sido expulsado.')));
-        }
-
-        final isHost = roomData['hostId'] == currentUser?.uid;
-        final allReady = players.isNotEmpty && players.length > 1 && players.every((p) => p['isReady'] == true);
-        final me = players.firstWhere((p) => p['uid'] == currentUser?.uid, orElse: () => {});
-
-        return DefaultTabController(
-          length: 2,
-          child: WillPopScope(
-            onWillPop: _onWillPop,
-            child: Scaffold(
-              appBar: AppBar(
-                title: const Text('Sala de Espera'),
-                bottom: const TabBar(
-                  tabs: [
-                    Tab(icon: Icon(Icons.people), text: 'Jugadores'),
-                    Tab(icon: Icon(Icons.chat), text: 'Chat'),
-                  ],
-                ),
-              ),
-              body: Column(
-                children: [
-                  _buildHeader(roomData),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _buildPlayersTab(roomData, currentUser?.uid ?? ''),
-                        _buildChatTab(currentUser?.uid ?? ''),
-                      ],
-                    ),
-                  ),
-                  _buildBottomButton(isHost, allReady, me, currentUser),
-                ],
-              ),
-              floatingActionButton: isHost
-                  ? FloatingActionButton(
-                      onPressed: () => _showSettingsModal(context, roomData, players, currentUser),
-                      child: const Icon(Icons.settings),
-                    )
-                  : null,
-            ),
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(children: [
+          Image.asset(backgroundImage, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
+          SafeArea(
+            child: Column(children: [
+              _buildHeader(theme),
+              Expanded(child: _buildPlayerGrid()),
+              _buildFooter(theme),
+            ]),
           ),
-        );
-      },
+        ]),
+      ),
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> roomData) {
+  Widget _buildHeader(ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          Text('Jugadores: ${roomData['players'].length}/${roomData['maxPlayers']}', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          SelectableText(_roomCode!, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _shareInvitation,
-            icon: const Icon(Icons.share),
-            label: const Text('Invitar a Amigos'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showPlayerProfile(BuildContext context, Map<String, dynamic> player, Map<String, dynamic> roomData) {
-    final currentUser = _userService.currentUser;
-    final isHost = roomData['hostId'] == currentUser?.uid;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(player['alias']),
-        content: const Text('Perfil del jugador.'),
-        actions: [
-          if (isHost && player['uid'] != currentUser?.uid) ...[
-            TextButton(
-              onPressed: () {
-                _firestoreService.kickPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Expulsar'),
-            ),
-            TextButton(
-              onPressed: () {
-                _firestoreService.banPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']);
-                Navigator.of(context).pop();
-              },
-              child: Text('Banear', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ),
-          ],
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlayersTab(Map<String, dynamic> roomData, String currentUserId) {
-    final players = List<Map<String, dynamic>>.from(roomData['players'] ?? []);
-    return ListView.builder(
-      itemCount: players.length,
-      itemBuilder: (context, index) {
-        final player = players[index];
-        final isCurrentUser = player['uid'] == currentUserId;
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: ListTile(
-            onTap: () => isCurrentUser ? _showColorPicker(context, players, currentUserId) : _showPlayerProfile(context, player, roomData),
-            leading: CircleAvatar(backgroundColor: Color(int.parse(player['color'].substring(1, 7), radix: 16) + 0xFF000000)),
-            title: Text(player['alias'] ?? 'Jugador Desconocido'),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (player['isReady'] == true) const Icon(Icons.check_circle, color: Colors.green),
-                const SizedBox(width: 8),
-                if (roomData['hostId'] == player['uid']) const Icon(Icons.star, color: Colors.amber),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChatTab(String currentUserId) {
-    return Column(
-      children: [
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: _firestoreService.getChatStream(_roomCode!),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-              final messages = snapshot.data!.docs;
-              return ListView.builder(
-                reverse: true,
-                itemCount: messages.length,
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                itemBuilder: (context, index) {
-                  final message = messages[index].data() as Map<String, dynamic>;
-                  if (message['isEvent'] == true) {
-                    return _buildEventMessage(message);
-                  }
-                  final bool isMe = message['uid'] == currentUserId;
-                  return _buildChatMessage(message, isMe);
-                },
-              );
-            },
-          ),
-        ),
-        _buildChatInput(),
-      ],
-    );
-  }
-
-  Widget _buildEventMessage(Map<String, dynamic> message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Text(
-          '${message['alias']} ${message['text']}',
-          style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatMessage(Map<String, dynamic> message, bool isMe) {
-    final color = Color(int.parse(message['color'].substring(1, 7), radix: 16) + 0xFF000000);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
-            decoration: BoxDecoration(
-              color: isMe ? Theme.of(context).colorScheme.primary.withOpacity(0.2) : Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: RichText(
-              text: TextSpan(
-                style: Theme.of(context).textTheme.bodyMedium,
-                children: [
-                  TextSpan(
-                    text: '${message['alias']}: ',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: color),
-                  ),
-                  TextSpan(text: message['text']),
-                ],
-              ),
-            ),
-          ),
+          IconButton(icon: const Icon(Icons.exit_to_app, color: Colors.white), onPressed: _onWillPop, tooltip: 'Salir de la sala'),
+          Column(children: [
+            const Text('Código de la Sala', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            SelectableText(_roomCode ?? '', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+          ]),
+          IconButton(icon: const Icon(Icons.share, color: Colors.white), onPressed: _shareInvitation, tooltip: 'Invitar a amigos'),
         ],
       ),
     );
   }
 
-  Widget _buildChatInput() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
+  Widget _buildPlayerGrid() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: Provider.of<FirestoreService>(context).getPlayersStream(_roomCode!),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final players = snapshot.data!.docs;
+        return GridView.builder(
+          padding: const EdgeInsets.all(16.0),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 200, childAspectRatio: 0.8, crossAxisSpacing: 16, mainAxisSpacing: 16, 
+          ),
+          itemCount: players.length,
+          itemBuilder: (context, index) {
+            final player = players[index].data() as Map<String, dynamic>;
+            return PlayerAvatar(playerData: player);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildFooter(ThemeData theme) {
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final userAlias = Provider.of<UserService>(context, listen: false).currentUser?.alias ?? '';
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      color: isDarkMode ? Colors.black.withOpacity(0.3) : Colors.white.withOpacity(0.2),
       child: Row(
         children: [
           Expanded(
             child: TextField(
               controller: _chatController,
-              decoration: const InputDecoration(hintText: 'Escribe un mensaje...', border: OutlineInputBorder()),
-              onSubmitted: (_) => _sendMessage(),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Escribe un mensaje...',
+                hintStyle: const TextStyle(color: Colors.white70),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                filled: true,
+                fillColor: Colors.black.withOpacity(0.2),
+              ),
+              onSubmitted: (text) => Provider.of<FirestoreService>(context, listen: false).sendMessage(roomCode: _roomCode!, alias: userAlias, text: text),
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: _sendMessage,
+          const SizedBox(width: 10),
+          ElevatedButton(
+            onPressed: () => Provider.of<FirestoreService>(context, listen: false).sendMessage(roomCode: _roomCode!, alias: userAlias, text: _chatController.text),
+            style: ElevatedButton.styleFrom(shape: const CircleBorder(), padding: const EdgeInsets.all(16)),
+            child: const Icon(Icons.send),
           ),
         ],
       ),
-    );
-  }
-
-  void _showSettingsModal(BuildContext context, Map<String, dynamic> roomData, List<Map<String, dynamic>> players, User? currentUser) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          builder: (context, scrollController) {
-            return _buildSettingsTab(roomData, players, currentUser, scrollController);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildSettingsTab(Map<String, dynamic> roomData, List<Map<String, dynamic>> players, User? currentUser, ScrollController scrollController) {
-    return ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        const Text('Ajustes de la Sala', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        SwitchListTile.adaptive(
-          title: const Text('Sala Pública'),
-          value: roomData['isPublic'] ?? true,
-          onChanged: (value) => _firestoreService.updateRoomSettings(_roomCode!, isPublic: value),
-        ),
-        DropdownButtonFormField<int>(
-          value: roomData['maxPlayers'],
-          decoration: const InputDecoration(labelText: 'Jugadores Máximos'),
-          items: [6, 8, 10, 12].map((value) => DropdownMenuItem(value: value, child: Text('$value jugadores'))).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              _firestoreService.updateRoomSettings(_roomCode!, maxPlayers: value);
-            }
-          },
-        ),
-        const Divider(height: 32),
-        const Text('Gestionar Jugadores', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        ...players.where((p) => p['uid'] != currentUser?.uid).map((player) {
-          return ListTile(
-            title: Text(player['alias']),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton(onPressed: () => _firestoreService.kickPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']), child: const Text('Expulsar')),
-                TextButton(onPressed: () => _firestoreService.banPlayer(_roomCode!, player['uid'], currentUser!.alias, player['alias']), child: Text('Banear', style: TextStyle(color: Theme.of(context).colorScheme.error))),
-              ],
-            ),
-          );
-        })
-      ],
-    );
-  }
-
-  Widget _buildBottomButton(bool isHost, bool allReady, Map<String, dynamic> me, User? currentUser) {
-    if (currentUser == null || me.isEmpty) return const SizedBox.shrink();
-
-    bool isReady = me['isReady'] ?? false;
-
-    if (isHost) {
-      return Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: () => _firestoreService.togglePlayerReadyState(_roomCode!, currentUser.uid),
-          style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: isReady ? (allReady ? Colors.green : Colors.grey) : null),
-          child: Text(allReady ? '¡Empezar Partida!' : (isReady ? 'Esperando...' : '¿Preparado?')),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ElevatedButton(
-        onPressed: () => _firestoreService.togglePlayerReadyState(_roomCode!, currentUser.uid),
-        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50), backgroundColor: isReady ? Colors.grey : null),
-        child: Text(isReady ? 'Esperando...' : '¿Preparado?'),
-      ),
-    );
-  }
-
-  void _showColorPicker(BuildContext context, List<Map<String, dynamic>> players, String currentUserId) {
-    final usedColors = players.map((p) => p['color']).toSet();
-    showDialog(
-      context: context,
-      builder: (context) {
-        // ... El resto del diálogo para seleccionar color
-        return AlertDialog(
-          title: const Text('Elige tu color'),
-          content: const Text('Próximamente...'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cerrar'),
-            )
-          ],
-        );
-      },
     );
   }
 }

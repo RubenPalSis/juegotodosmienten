@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-import '../services/user_service.dart';
-import '../services/firestore_service.dart';
-import '../services/language_service.dart';
-import '../services/navigation_service.dart';
+import 'package:juegotodosmienten/services/user_service.dart';
+import 'package:juegotodosmienten/services/firestore_service.dart';
+import 'package:juegotodosmienten/utils/ui_helpers.dart';
 import 'home_screen.dart';
 import 'lobby_screen.dart';
 
@@ -32,35 +28,31 @@ class _AliasScreenState extends State<AliasScreen> {
 
     final alias = _aliasController.text.trim();
     final firestoreService = Provider.of<FirestoreService>(context, listen: false);
-    final langService = Provider.of<LanguageService>(context, listen: false);
-    final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final userCredential = await FirebaseAuth.instance.signInAnonymously();
-      final uid = userCredential.user?.uid;
-
-      if (uid == null) throw Exception('Authentication failed');
-
-      final isTaken = await firestoreService.isAliasTaken(alias);
+      final isTaken = await firestoreService.getUserByAlias(alias) != null;
       if (isTaken) {
-        messenger.showSnackBar(const SnackBar(content: Text('Este alias ya está en uso.'))); // Localized
-        setState(() => _isLoading = false);
+        if (mounted) {
+          showCustomSnackBar(context, 'Este alias ya está en uso.', isError: true);
+        }
         return;
       }
 
-      await firestoreService.createUserProfile(alias: alias, uid: uid, language: langService.appLocale.languageCode);
-      
       final userService = Provider.of<UserService>(context, listen: false);
-      await userService.createUser(alias, uid);
+      await userService.createUser(alias);
 
-      if (widget.roomCodeToJoin != null) {
-        NavigationService.pushReplacementNamed(LobbyScreen.routeName, arguments: {'roomCode': widget.roomCodeToJoin});
-      } else {
-        NavigationService.pushReplacementNamed(HomeScreen.routeName);
+      if (mounted) {
+        // Navegar a la pantalla correcta después de crear el usuario.
+        if (widget.roomCodeToJoin != null) {
+          Navigator.of(context).pushReplacementNamed(LobbyScreen.routeName, arguments: {'roomCode': widget.roomCodeToJoin});
+        } else {
+          Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+        }
       }
-
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Error al crear el usuario: $e')));
+      if (mounted) {
+        showCustomSnackBar(context, 'Error al crear el usuario: $e', isError: true);
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -73,85 +65,65 @@ class _AliasScreenState extends State<AliasScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: Row(
-        children: [
-          // Character Model Viewer
-          Expanded(
-            flex: 2,
-            child: Container(
-              color: theme.colorScheme.surface.withOpacity(0.5),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ModelViewer(
-                  src: 'assets/models/robot.glb',
-                  alt: 'Personaje inicial',
-                  autoRotate: true,
-                  cameraControls: false,
-                  disableZoom: true,
-                  backgroundColor: Colors.transparent,
-                ),
-              ),
-            ),
-          ),
-
-          // Alias Form
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      '¡Bienvenido a Todos Mienten!',
-                      style: theme.textTheme.headlineLarge,
-                      textAlign: TextAlign.center,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    '¡Bienvenido a Todos Mienten!',
+                    style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Elige tu alias para empezar a jugar.',
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 48),
+                  TextFormField(
+                    controller: _aliasController,
+                    decoration: const InputDecoration(
+                      labelText: 'Alias',
+                      prefixIcon: Icon(Icons.person_outline),
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Elige tu alias para empezar a jugar.',
-                      style: theme.textTheme.titleMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
-                    TextFormField(
-                      controller: _aliasController,
-                      decoration: const InputDecoration(
-                        labelText: 'Alias',
-                        prefixIcon: Icon(Icons.person),
-                      ),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall,
-                      validator: (value) {
-                        if (value == null || value.trim().length < 3) {
-                          return 'El alias debe tener al menos 3 caracteres.';
-                        }
-                        if (RegExp(r'[^a-zA-Z0-9_]').hasMatch(value)) {
-                          return 'Solo se permiten letras, números y guiones bajos.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 32),
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 20),
-                              textStyle: theme.textTheme.titleLarge,
-                            ),
-                            onPressed: _submitAlias,
-                            child: const Text('Guardar y Entrar'),
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall,
+                    validator: (value) {
+                      if (value == null || value.trim().length < 3) {
+                        return 'El alias debe tener al menos 3 caracteres.';
+                      }
+                      if (RegExp(r'[^a-zA-Z0-9_]').hasMatch(value)) {
+                        return 'Solo se permiten letras, números y guiones bajos.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 32),
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            textStyle: theme.textTheme.titleLarge,
                           ),
-                  ],
-                ),
+                          onPressed: _submitAlias,
+                          child: const Text('Guardar y Entrar'),
+                        ),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

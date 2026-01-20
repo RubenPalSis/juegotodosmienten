@@ -1,56 +1,45 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class User {
-  final int id;
-  final String uid;
   final String alias;
+  final String email;
   final int totalExp;
-  final String? selectedCharacter;
   final int goldCoins;
   final int bronzeCoins;
-  final String? email;
-
-  static const String colId = 'id';
-  static const String colUid = 'uid';
-  static const String colAlias = 'alias';
-  static const String colTotalExp = 'totalExp';
-  static const String colSelectedCharacter = 'selectedCharacter';
-  static const String colGoldCoins = 'goldCoins';
-  static const String colBronzeCoins = 'bronzeCoins';
-  static const String colEmail = 'email';
+  final String selectedCharacter;
+  final List<String> unlockedCharacters;
 
   User({
-    required this.id,
-    required this.uid,
     required this.alias,
-    required this.totalExp,
-    this.selectedCharacter,
+    this.email = '',
+    this.totalExp = 0,
     this.goldCoins = 0,
     this.bronzeCoins = 0,
-    this.email,
-  });
+    this.selectedCharacter = 'robot.glb',
+    List<String>? unlockedCharacters,
+  }) : unlockedCharacters = unlockedCharacters ?? ['robot.glb'];
 
-  Map<String, dynamic> toMap() {
-    return {
-      colId: id,
-      colUid: uid,
-      colAlias: alias,
-      colTotalExp: totalExp,
-      colSelectedCharacter: selectedCharacter,
-      colGoldCoins: goldCoins,
-      colBronzeCoins: bronzeCoins,
-      colEmail: email,
-    };
+  factory User.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return User(
+      alias: doc.id,
+      email: data['email'] ?? '',
+      totalExp: data['totalExp'] ?? 0,
+      goldCoins: data['gold_coins'] ?? 0,
+      bronzeCoins: data['bronze_coins'] ?? 0,
+      selectedCharacter: data['selectedCharacter'] ?? 'robot.glb',
+      unlockedCharacters: List<String>.from(data['unlockedCharacters'] ?? ['robot.glb']),
+    );
   }
 
-  factory User.fromMap(Map<String, dynamic> map) {
-    return User(
-      id: map[colId],
-      uid: map[colUid],
-      alias: map[colAlias],
-      totalExp: map[colTotalExp],
-      selectedCharacter: map[colSelectedCharacter],
-      goldCoins: map[colGoldCoins] ?? 0,
-      bronzeCoins: map[colBronzeCoins] ?? 0,
-      email: map[colEmail],
-    );
+  Map<String, dynamic> toFirestore() {
+    return {
+      'email': email,
+      'totalExp': totalExp,
+      'gold_coins': goldCoins,
+      'bronze_coins': bronzeCoins,
+      'selectedCharacter': selectedCharacter,
+      'unlockedCharacters': unlockedCharacters,
+    };
   }
 }

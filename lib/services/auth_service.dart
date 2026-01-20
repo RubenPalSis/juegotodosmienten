@@ -3,12 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import './email_service.dart';
-import './database_service.dart';
 
 class AuthService with ChangeNotifier {
   String? _userEmail;
   bool _isEmailVerified = false;
-  final DatabaseService _dbService = DatabaseService();
 
   // Claves para SharedPreferences
   static const String _emailKey = 'user_email';
@@ -133,11 +131,5 @@ class AuthService with ChangeNotifier {
       }
       return false;
     }
-  }
-
-  Future<void> signOut() async {
-    await unlinkEmail();
-    await _dbService.deleteDatabase();
-    notifyListeners();
   }
 }
