@@ -34,29 +34,31 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     final userService = Provider.of<UserService>(context, listen: false);
     final authService = Provider.of<AuthService>(context, listen: false);
 
-    var user = userService.currentUser;
-
-    if (user == null) {
-      final authUser = await authService.signInAnonymously();
-      if (authUser != null) {
-        await userService.loadUser();
-        user = userService.currentUser;
-      }
-    }
-
-    if (user == null) {
-      if (mounted) {
-        showCustomSnackBar(
-          context,
-          'Error: Usuario no encontrado para crear la sala.',
-          isError: true,
-        );
-      }
-      setState(() => _isLoading = false);
-      return;
-    }
-
     try {
+      // Ensure user is authenticated
+      if (authService.firebaseUser == null) {
+        await authService.signInAnonymously();
+      }
+
+      // Ensure user data is loaded
+      if (userService.currentUser == null) {
+        await userService.loadUser();
+      }
+
+      final user = userService.currentUser;
+
+      if (user == null) {
+        if (mounted) {
+          showCustomSnackBar(
+            context,
+            'Debes crear un alias antes de crear una sala.',
+            isError: true,
+          );
+          Navigator.of(context).pop(); // Go back if no alias
+        }
+        return;
+      }
+
       final roomCode = await firestoreService.createRoom(
         hostAlias: user.alias,
         hostData: {
@@ -81,6 +83,9 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
           'Error al crear la sala: $e',
           isError: true,
         );
+      }
+    } finally {
+      if (mounted) {
         setState(() => _isLoading = false);
       }
     }

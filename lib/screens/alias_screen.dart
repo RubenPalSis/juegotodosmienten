@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:juegotodosmienten/services/user_service.dart';
 import 'package:juegotodosmienten/services/firestore_service.dart';
 import 'package:juegotodosmienten/services/auth_service.dart';
+import 'package:juegotodosmienten/services/navigation_service.dart';
 import 'package:juegotodosmienten/utils/ui_helpers.dart';
 import 'home_screen.dart';
 import 'lobby_screen.dart';
@@ -69,6 +70,7 @@ class _AliasScreenState extends State<AliasScreen> {
             isError: true,
           );
         }
+        setState(() => _isLoading = false);
         return;
       }
 
@@ -78,12 +80,12 @@ class _AliasScreenState extends State<AliasScreen> {
       if (mounted) {
         // Navegar a la pantalla correcta después de crear el usuario.
         if (widget.roomCodeToJoin != null) {
-          Navigator.of(context).pushReplacementNamed(
+          NavigationService.pushReplacementNamed(
             LobbyScreen.routeName,
             arguments: {'roomCode': widget.roomCodeToJoin},
           );
         } else {
-          Navigator.of(context).pushReplacementNamed(HomeScreen.routeName);
+          NavigationService.pushReplacementNamed(HomeScreen.routeName);
         }
       }
     } catch (e) {
