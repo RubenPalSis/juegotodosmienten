@@ -35,12 +35,10 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
     final authService = Provider.of<AuthService>(context, listen: false);
 
     try {
-      // Ensure user is authenticated
       if (authService.firebaseUser == null) {
         await authService.signInAnonymously();
       }
 
-      // Ensure user data is loaded
       if (userService.currentUser == null) {
         await userService.loadUser();
       }
@@ -54,16 +52,17 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
             'Debes crear un alias antes de crear una sala.',
             isError: true,
           );
-          Navigator.of(context).pop(); // Go back if no alias
+          Navigator.of(context).pop();
         }
         return;
       }
 
       final roomCode = await firestoreService.createRoom(
         hostAlias: user.alias,
+        hostUid: user.uid, // CORREGIDO: Se añade el UID del host
         hostData: {
           'alias': user.alias,
-          'isReady': true, // El host siempre está listo
+          'isReady': true,
           'selectedCharacter': user.selectedCharacter,
         },
         maxPlayers: _maxPlayers,

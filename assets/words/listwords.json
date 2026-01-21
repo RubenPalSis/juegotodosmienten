@@ -1,0 +1,123 @@
+
+{
+  "Comida y Bebida": [
+    "pizza", "hamburguesa", "patatas fritas", "helado", "chocolate", "galletas", "tarta", "caramelo", "refresco", "zumo",
+    "agua", "leche", "café", "té", "pan", "queso", "jamón", "huevo", "yogur", "cereales",
+    "arroz", "pasta", "sopa", "ensalada", "fruta", "verdura", "carne", "pollo", "pescado", "bocadillo",
+    "manzana", "plátano", "naranja", "fresa", "uva", "sandía", "limón", "pera", "melocotón", "cereza",
+    "tomate", "lechuga", "cebolla", "patata", "zanahoria", "pepino", "pimiento", "ajo", "brócoli", "espinacas",
+    "azúcar", "sal", "aceite", "vinagre", "mantequilla", "mermelada", "miel", "kétchup", "mostaza", "mayonesa",
+    "palomitas", "frutos secos", "aceitunas", "patatas de bolsa", "gominolas", "chicle", "piruleta", "donuts", "magdalenas", "cruasán",
+    "lentejas", "garbanzos", "judías", "guisantes", "champiñones", "maíz", "atún en lata", "sardinas", "salchichas", "bacon",
+    "flan", "natillas", "gelatina", "batido", "granizado", "horchata", "paella", "tortilla", "croquetas", "gazpacho",
+    "turrón", "mazapán", "polvorón", "roscón", "uvas de fin de año", "castañas", "churros", "porras", "gofre", "crepes"
+  ],
+  "Animales": [
+    "perro", "gato", "pájaro", "pez", "hámster", "conejo", "tortuga", "caballo", "vaca", "oveja",
+    "cerdo", "gallina", "pato", "león", "tigre", "elefante", "jirafa", "mono", "cebra", "oso",
+    "lobo", "zorro", "ciervo", "ardilla", "ratón", "rana", "sapo", "serpiente", "cocodrilo", "tiburón",
+    "delfín", "ballena", "pulpo", "cangrejo", "mariposa", "abeja", "mariquita", "hormiga", "araña", "mosquito",
+    "mosca", "gusano", "caracol", "águila", "búho", "loro", "pingüino", "koala", "canguro", "camello",
+    "hipopótamo", "rinoceronte", "gorila", "chimpancé", "panda", "pavo real", "flamenco", "cisne", "gaviota", "murciélago",
+    "erizo", "topo", "castor", "nutria", "foca", "morsa", "guepardo", "leopardo", "hiena", "lince",
+    "colibrí", "tucán", "avestruz", "emú", "pelícano", "pingüino emperador", "oso polar", "oso pardo", "lobo gris", "zorro rojo",
+    "serpiente de cascabel", "cobra", "boa", "anaconda", "tarántula", "escorpión", "viuda negra", "medusa", "estrella de mar", "erizo de mar",
+    "coral", "esponja", "almeja", "mejillón", "ostra", "calamar", "langosta", "gamba", "percebe", "centollo"
+  ],
+  "Cosas de Casa": [
+    "silla", "mesa", "cama", "sofá", "armario", "estantería", "puerta", "ventana", "lámpara", "alfombra",
+    "televisión", "mando a distancia", "teléfono", "ordenador", "tablet", "libro", "revista", "periódico", "cuadro", "foto",
+    "plato", "vaso", "taza", "cubiertos", "servilleta", "mantel", "sartén", "olla", "horno", "microondas",
+    "nevera", "lavadora", "secadora", "lavavajillas", "aspiradora", "escoba", "fregona", "cubo", "plancha", "espejo",
+    "reloj", "despertador", "calendario", "papelera", "jarrón", "cojín", "manta", "sábana", "almohada", "toalla",
+    "jabón", "champú", "gel", "pasta de dientes", "cepillo de dientes", "peine", "secador de pelo", "papel higiénico", "pañuelo", "tiritas",
+    "llave", "cerradura", "timbre", "escalera", "ascensor", "balcón", "terraza", "jardín", "garaje", "buzón",
+    "enchufe", "interruptor", "bombilla", "cable", "pila", "batería", "linterna", "vela", "cerilla", "mechero",
+    "juguete", "muñeca", "cochecito", "pelota", "puzle", "juego de mesa", "cartas", "dados", "lápiz", "bolígrafo",
+    "cuaderno", "goma de borrar", "sacapuntas", "tijeras", "pegamento", "mochila", "estuche", "maceta", "planta", "flor"
+  ],
+  "Oficios y Profesiones": [
+    "médico", "doctora", "enfermero", "enfermera", "dentista", "farmacéutico", "veterinario", "profesor", "profesora", "maestro",
+    "maestra", "cocinero", "cocinera", "camarero", "camarera", "panadero", "panadera", "peluquero", "peluquera", "dependiente",
+    "dependienta", "cajero", "cajera", "policía", "bombero", "bombera", "cartero", "cartera", "conductor", "conductora",
+    "piloto", "azafata", "mecánico", "mecánica", "electricista", "fontanero", "carpintero", "albañil", "pintor", "pintora",
+    "jardinero", "jardinera", "limpiador", "limpiadora", "músico", "cantante", "actor", "actriz", "bailarín", "bailarina",
+    "escritor", "escritora", "periodista", "fotógrafo", "fotógrafa", "deportista", "entrenador", "entrenadora", "árbitro", "jueza",
+    "abogado", "abogada", "científico", "científica", "informático", "informatica", "ingeniero", "ingeniera", "arquitecto", "arquitecta",
+    "granjero", "granjera", "pescador", "pescadora", "astronauta", "soldado", "marinero", "capitana", "presidente", "presidenta",
+    "rey", "reina", "príncipe", "princesa", "payaso", "mago", "maga", "detective", "espía", "superhéroe",
+    "artista", "recepcionista", "secretario", "secretaria", "bibliotecario", "bibliotecaria", "socorrista", "guía turístico", "taxista", "basurero"
+  ],
+  "Ropa y Accesorios": [
+    "camiseta", "camisa", "pantalón", "vaqueros", "falda", "vestido", "chaqueta", "abrigo", "jersey", "sudadera",
+    "calcetines", "zapatos", "zapatillas", "botas", "sandalias", "pijama", "bañador", "bikini", "ropa interior", "guantes",
+    "bufanda", "gorro", "sombrero", "gorra", "cinturón", "corbata", "pajarita", "gafas", "gafas de sol", "reloj",
+    "pulsera", "collar", "anillo", "pendientes", "bolso", "mochila", "cartera", "maleta", "paraguas", "pañuelo",
+    "disfraz", "máscara", "antifaz", "corona", "capa", "varita mágica", "uniforme", "chándal", "peto", "leotardos",
+    "chaleco", "gabardina", "impermeable", "anorak", "manoplas", "orejeras", "delantal", "bata", "albornoz", "zapatillas de casa",
+    "tacones", "chanclas", "mocasines", "botines", "alpargatas", "lazo", "diadema", "horquilla", "coletero", "goma del pelo",
+    "medalla", "insignia", "pin", "broche", "gemelos", "tirantes", "riñonera", "neceser", "llavero", "abanico",
+    "túnica", "kimono", "velo", "turbante", "peluca", "bigote falso", "barba postiza", "parche de pirata", "garfio", "pata de palo",
+    "armadura", "casco", "escudo", "espada de juguete", "tutú", "mallas", "calentadores", "body", "maillot", "zapatillas de ballet"
+  ],
+  "Naturaleza": [
+    "sol", "luna", "estrella", "cielo", "nube", "lluvia", "nieve", "viento", "arcoíris", "rayo",
+    "montaña", "río", "lago", "mar", "océano", "playa", "isla", "desierto", "selva", "bosque",
+    "árbol", "flor", "hoja", "hierba", "planta", "semilla", "raíz", "tronco", "rama", "cactus",
+    "piedra", "roca", "arena", "tierra", "volcán", "cueva", "cascada", "ola", "marea", "iceberg",
+    "amanecer", "atardecer", "noche", "día", "estaciones", "primavera", "verano", "otoño", "invierno", "clima",
+    "margarita", "rosa", "girasol", "tulipán", "clavel", "amapola", "lavanda", "orquídea", "pino", "roble",
+    "palmera", "césped", "musgo", "alga", "helecho", "seta", "champiñón", "trébol", "diente de león", "ortiga",
+    "planeta", "cometa", "meteorito", "galaxia", "universo", "eclipse", "aurora boreal", "constelación", "Vía Láctea", "agujero negro",
+    "aire", "fuego", "agua", "tierra", "trueno", "relámpago", "tormenta", "huracán", "tornado", "terremoto",
+    "colina", "valle", "llanura", "meseta", "cañón", "fiordo", "géiser", "manantial", "arroyo", "charco"
+  ],
+  "Cine y TV": [
+    "película", "cine", "serie", "documental", "dibujos animados", "actor", "actriz", "director", "guion", "escena",
+    "personaje", "protagonista", "villano", "superhéroe", "princesa", "príncipe", "monstruo", "extraterrestre", "robot", "fantasma",
+    "Mickey Mouse", "Pato Donald", "Goofy", "Minnie", "Pluto", "Spiderman", "Batman", "Superman", "Iron Man", "Hulk",
+    "Elsa", "Anna", "Olaf", "Buzz Lightyear", "Woody", "Simba", "Timón", "Pumba", "Harry Potter", "Hermione",
+    "Ron Weasley", "Darth Vader", "Luke Skywalker", "Yoda", "Shrek", "Asno", "Fiona", "Los Simpson", "Homer", "Bart",
+    "Bob Esponja", "Patricio", "Calamardo", "Arenita", "Star Wars", "Toy Story", "El Rey León", "Frozen", "Vengadores", "Titanic",
+    "Avatar", "Jurassic Park", "E.T.", "Indiana Jones", "James Bond", "Misión Imposible", "Piratas del Caribe", "Jack Sparrow", "La Casa de Papel", "Stranger Things",
+    "Juego de Tronos", "Netflix", "HBO", "Disney+", "YouTube", "TikTok", "Instagram", "presentador", "concurso", "noticias",
+    "comedia", "drama", "acción", "aventura", "ciencia ficción", "terror", "musical", "romance", "suspense", "western",
+    "palomitas", "entrada", "butaca", "pantalla", "proyector", "efectos especiales", "banda sonora", "tráiler", "estreno", "taquilla"
+  ],
+  "Partes del Cuerpo": [
+    "cabeza", "pelo", "cara", "ojo", "ceja", "pestaña", "nariz", "boca", "labio", "diente",
+    "lengua", "oreja", "cuello", "hombro", "brazo", "codo", "muñeca", "mano", "dedo", "uña",
+    "pecho", "espalda", "barriga", "tripa", "cintura", "cadera", "pierna", "rodilla", "tobillo", "pie",
+    "talón", "planta del pie", "dedo del pie", "piel", "hueso", "músculo", "sangre", "corazón", "pulmón", "cerebro",
+    "estómago", "hígado", "riñón", "vena", "arteria", "esqueleto", "cráneo", "costilla", "columna vertebral", "fémur",
+    "mejilla", "barbilla", "frente", "sien", "nuca", "garganta", "axila", "ombligo", "ingle", "nalga",
+    "palma de la mano", "nudillo", "yema del dedo", "cutícula", "lunar", "peca", "cicatriz", "arruga", "vello", "barba",
+    "bigote", "patillas", "melena", "flequillo", "trenza", "coleta", "moño", "calva", "cana", "lágrima",
+    "saliva", "sudor", "moco", "estornudo", "tos", "bostezo", "hipo", "sonrisa", "risa", "llanto",
+    "parpado", "iris", "pupila", "tímpano", "campanilla", "encía", "muela", "mandíbula", "clavícula", "esternón"
+  ],
+  "Hobbies y Juegos": [
+    "jugar", "leer", "dibujar", "pintar", "cantar", "bailar", "escuchar música", "ver la tele", "ir al cine", "cocinar",
+    "deporte", "fútbol", "baloncesto", "tenis", "natación", "correr", "ir en bici", "patinar", "esquiar", "surfear",
+    "videojuego", "consola", "ordenador", "móvil", "puzzle", "rompecabezas", "juego de mesa", "cartas", "parchís", "oca",
+    "ajedrez", "damas", "dominó", "Monopoly", "Trivial", "Scrabble", "UNO", "adivinanzas", "trabalenguas", "chiste",
+    "magia", "truco", "disfrazarse", "hacer teatro", "marionetas", "títeres", "manualidades", "plastilina", "papiroflexia", "recortar",
+    "pegar", "colorear", "construir", "bloques", "Lego", "Playmobil", "muñecas", "coches de juguete", "tren eléctrico", "cometa",
+    "peonza", "yoyó", "canicas", "cromos", "coleccionar", "sellos", "monedas", "pegatinas", "fotografía", "hacer vídeos",
+    "viajar", "ir de excursión", "acampar", "pescar", "hacer senderismo", "jardinería", "cuidar plantas", "bricolaje", "reparar cosas", "escribir",
+    "tocar un instrumento", "guitarra", "piano", "flauta", "batería", "violín", "aprender idiomas", "hacer yoga", "meditar", "relajarse",
+    "escondite", "pilla-pilla", "gallinita ciega", "rayuela", "comba", "goma elástica", "balón prisionero", "carreras de sacos", "pañuelo", "petanca"
+  ],
+  "Transporte": [
+    "coche", "moto", "bicicleta", "autobús", "camión", "furgoneta", "tren", "metro", "tranvía", "avión",
+    "helicóptero", "barco", "submarino", "cohete", "taxi", "ambulancia", "coche de policía", "camión de bomberos", "grúa", "tractor",
+    "patinete", "monopatín", "patines", "triciclo", "carretilla", "globo aerostático", "dirigible", "teleférico", "funicular", "ascensor",
+    "escalera mecánica", "canoa", "kayak", "piragua", "velero", "yate", "crucero", "ferry", "lancha", "moto de agua",
+    "caravana", "remolque", "metro", "estación", "aeropuerto", "puerto", "carretera", "autopista", "calle", "acera",
+    "semáforo", "señal de tráfico", "paso de cebra", "rotonda", "puente", "túnel", "peaje", "gasolinera", "aparcamiento", "garaje",
+    "rueda", "motor", "volante", "asiento", "cinturón de seguridad", "ventana", "puerta", "maletero", "faro", "matrícula",
+    "billete", "pasaje", "conductor", "piloto", "capitán", "pasajero", "viajero", "turista", "maleta", "equipaje",
+    "parada", "andén", "vía", "pista de aterrizaje", "muelle", "ancla", "vela", "remo", "pedal", "manillar",
+    "casco", "chaleco salvavidas", "mapa", "brújula", "GPS", "tráfico", "atasco", "accidente", "viaje", "excursión"
+  ]
+}

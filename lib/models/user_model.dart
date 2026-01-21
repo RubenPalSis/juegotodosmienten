@@ -9,6 +9,7 @@ class User {
   final int bronzeCoins;
   final String selectedCharacter;
   final List<String> unlockedCharacters;
+  final List<int> unlockedColors;
 
   User({
     required this.uid,
@@ -19,7 +20,9 @@ class User {
     this.bronzeCoins = 0,
     this.selectedCharacter = 'robot.glb',
     List<String>? unlockedCharacters,
-  }) : unlockedCharacters = unlockedCharacters ?? ['robot.glb'];
+    List<int>? unlockedColors,
+  }) : unlockedCharacters = unlockedCharacters ?? ['robot.glb'],
+       unlockedColors = unlockedColors ?? [];
 
   factory User.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -34,6 +37,7 @@ class User {
       unlockedCharacters: List<String>.from(
         data['unlockedCharacters'] ?? ['robot.glb'],
       ),
+      unlockedColors: List<int>.from(data['unlockedColors'] ?? []),
     );
   }
 
@@ -46,6 +50,7 @@ class User {
       'bronze_coins': bronzeCoins,
       'selectedCharacter': selectedCharacter,
       'unlockedCharacters': unlockedCharacters,
+      'unlockedColors': unlockedColors,
     };
   }
 }

@@ -101,9 +101,12 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : Colors.black;
     final backgroundImage = isDarkMode
         ? 'assets/img/Backgound_darkMode.png'
         : 'assets/img/Background_lightMode.png';
+    final fabBackgroundColor = isDarkMode ? Colors.grey[800] : Colors.white;
+    final fabIconColor = isDarkMode ? Colors.white : Colors.lightBlue;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -117,23 +120,57 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
             height: double.infinity,
           ),
           SafeArea(
-            child: Row(
+            child: Column(
               children: [
-                // Game Rooms List
                 Expanded(
-                  flex: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: _buildRoomsList(),
+                  child: Row(
+                    children: [
+                      // Game Rooms List
+                      Expanded(
+                        flex: 3,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const SizedBox(width: 70),
+                                  Text(
+                                    'Salas Públicas',
+                                    style: theme.textTheme.headlineSmall?.copyWith(
+                                      color: textColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh),
+                                    color: textColor,
+                                    onPressed: () {
+                                      setState(() {});
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Expanded(
+                                child: _buildRoomsList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const VerticalDivider(
+                        thickness: 1,
+                        width: 1,
+                        color: Colors.white24,
+                      ),
+                      // Actions Sidebar
+                      Expanded(flex: 2, child: _buildSidebar(theme)),
+                    ],
                   ),
                 ),
-                const VerticalDivider(
-                  thickness: 1,
-                  width: 1,
-                  color: Colors.white24,
-                ),
-                // Actions Sidebar
-                Expanded(flex: 2, child: _buildSidebar(theme)),
               ],
             ),
           ),
@@ -142,10 +179,10 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
             left: 20,
             child: FloatingActionButton(
               onPressed: () => Navigator.of(context).pop(),
-              backgroundColor: isDarkMode ? Colors.black : Colors.white,
+              backgroundColor: fabBackgroundColor,
               child: Icon(
                 Icons.arrow_back,
-                color: isDarkMode ? Colors.red : Colors.lightBlue,
+                color: fabIconColor,
               ),
             ),
           ),
@@ -160,6 +197,9 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
   }
 
   Widget _buildRoomsList() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDarkMode ? Colors.white : Colors.black;
+
     return StreamBuilder<QuerySnapshot>(
       stream: Provider.of<FirestoreService>(context).getAllRooms(),
       builder: (context, snapshot) {
@@ -167,7 +207,7 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
           return Center(
             child: Text(
               'Error: ${snapshot.error}',
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: textColor),
             ),
           );
         }
@@ -178,11 +218,11 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
         final rooms = snapshot.data?.docs ?? [];
 
         if (rooms.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No hay salas públicas disponibles.\n¡Crea una para empezar!',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, color: Colors.white),
+              style: TextStyle(fontSize: 18, color: textColor),
             ),
           );
         }
@@ -276,7 +316,7 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
     final tileColor = isDarkMode
-        ? Colors.grey[800]!.withOpacity(0.5)
+        ? Colors.black.withOpacity(0.6)
         : Colors.white.withOpacity(0.7);
     final textColor = isDarkMode ? Colors.white : Colors.black;
 
@@ -299,15 +339,21 @@ class _GameRoomsScreenState extends State<GameRoomsScreen> {
           '$playerCount/$maxPlayers Jugadores',
           style: TextStyle(color: textColor.withOpacity(0.7)),
         ),
-        trailing: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isDarkMode
-                ? Colors.blue.shade700
-                : Colors.blue.shade400,
-            foregroundColor: Colors.white,
+        trailing: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: 80, // Ancho mínimo
+            maxWidth: 120, // Ancho máximo
           ),
-          onPressed: isFull ? null : () => _joinRoom(roomCode),
-          child: const Text('Unirse'),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDarkMode
+                  ? Colors.blue.shade700
+                  : Colors.blue.shade400,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: isFull ? null : () => _joinRoom(roomCode),
+            child: const Text('Unirse'),
+          ),
         ),
         onTap: isFull ? null : () => _joinRoom(roomCode),
       ),

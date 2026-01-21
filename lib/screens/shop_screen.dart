@@ -1,346 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:juegotodosmienten/models/user_model.dart';
+import 'package:juegotodosmienten/services/firestore_service.dart';
+import 'package:juegotodosmienten/services/user_service.dart';
 
-import '../services/theme_service.dart';
-import '../services/user_service.dart';
-import '../utils/ui_helpers.dart';
-
-class ShopScreen extends StatelessWidget {
+class ShopScreen extends StatefulWidget {
   static const routeName = '/shop';
-
   const ShopScreen({super.key});
 
-  void _exchangeCoins(BuildContext context, int bronze, int gold) async {
-    final userService = Provider.of<UserService>(context, listen: false);
-    final success = await userService.exchangeBronzeForGold(bronze, gold);
+  @override
+  State<ShopScreen> createState() => _ShopScreenState();
+}
 
-    if (success) {
-      showCustomSnackBar(context, 'Intercambio realizado con éxito.');
-    } else {
-      showCustomSnackBar(
-        context,
-        'No tienes suficientes monedas de bronce.',
-        isError: true,
-      );
-    }
+class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeService>(
-      builder: (context, themeService, child) {
-        final isDarkMode =
-            themeService.themeMode == ThemeMode.dark ||
-            (themeService.themeMode == ThemeMode.system &&
-                MediaQuery.of(context).platformBrightness == Brightness.dark);
+    final theme = Theme.of(context);
+    final user = Provider.of<UserService>(context).currentUser;
+    final backgroundImage = theme.brightness == Brightness.dark
+        ? 'assets/img/Backgound_darkMode.png'
+        : 'assets/img/Background_lightMode.png';
 
-        final fabBackgroundColor = isDarkMode ? Colors.black : Colors.white;
-        final fabIconColor = isDarkMode ? Colors.white : Colors.black;
-
-        final backgroundImage = isDarkMode
-            ? 'assets/img/Backgound_darkMode.png'
-            : 'assets/img/Background_lightMode.png';
-
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Stack(
-            children: [
-              Image.asset(
-                backgroundImage,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-              ),
-              SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24.0, 70.0, 24.0, 20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildShopSection(
-                        context,
-                        title: 'Personajes',
-                        items: List.generate(
-                          6,
-                          (index) => ShopItem(
-                            name: 'Personaje ${index + 1}',
-                            price: 100,
-                            image: 'assets/img/character_placeholder.png',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      _buildShopSection(
-                        context,
-                        title: 'Colores',
-                        items: List.generate(
-                          3,
-                          (index) => ShopItem(
-                            name: 'Color ${index + 1}',
-                            price: 50,
-                            image: 'assets/img/color_placeholder.png',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      _buildShopSection(
-                        context,
-                        title: 'Accesorios',
-                        items: List.generate(
-                          4,
-                          (index) => ShopItem(
-                            name: 'Accesorio ${index + 1}',
-                            price: 75,
-                            image: 'assets/img/accessory_placeholder.png',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      _buildCoinExchangeSection(context),
-                    ],
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 20,
-                left: 20,
-                child: FloatingActionButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  backgroundColor: fabBackgroundColor,
-                  child: Icon(Icons.arrow_back, color: fabIconColor),
-                ),
-              ),
-              Positioned(
-                top: 20,
-                right: 20,
-                child: Consumer<UserService>(
-                  builder: (context, userService, child) {
-                    return Row(
-                      children: [
-                        _CoinDisplay(
-                          icon: 'assets/img/bronze_coin.png',
-                          amount: userService.currentUser?.bronzeCoins ?? 0,
-                        ),
-                        const SizedBox(width: 16),
-                        _CoinDisplay(
-                          icon: 'assets/img/gold_coin.png',
-                          amount: userService.currentUser?.goldCoins ?? 0,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildShopSection(
-    BuildContext context, {
-    required String title,
-    required List<ShopItem> items,
-  }) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: isDarkMode ? Colors.white : Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: items
-              .map((item) => _ShopItemCard(item: item, isDarkMode: isDarkMode))
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCoinExchangeSection(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Monedas',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: isDarkMode ? Colors.white : Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 3,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          children: [
-            _buildExchangeOffer(
-              context,
-              bronze: 50,
-              gold: 1,
-              isDarkMode: isDarkMode,
-            ),
-            _buildExchangeOffer(
-              context,
-              bronze: 100,
-              gold: 3,
-              isDarkMode: isDarkMode,
-            ),
-            _buildExchangeOffer(
-              context,
-              bronze: 200,
-              gold: 5,
-              isDarkMode: isDarkMode,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildExchangeOffer(
-    BuildContext context, {
-    required int bronze,
-    required int gold,
-    required bool isDarkMode,
-  }) {
-    return Card(
-      color: isDarkMode
-          ? Colors.black.withOpacity(0.4)
-          : Colors.white.withOpacity(0.6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDarkMode ? Colors.white.withOpacity(0.5) : Colors.black,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tienda'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          if (user != null)
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/img/bronze_coin.png',
-                  width: 24,
-                  height: 24,
-                ),
+                _CoinDisplay(icon: 'assets/img/gold_coin.png', amount: user.goldCoins),
                 const SizedBox(width: 8),
-                Text(
-                  '$bronze',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                _CoinDisplay(icon: 'assets/img/bronze_coin.png', amount: user.bronzeCoins),
+                const SizedBox(width: 16),
               ],
-            ),
-            Icon(
-              Icons.arrow_downward,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/img/gold_coin.png', width: 24, height: 24),
-                const SizedBox(width: 8),
-                Text(
-                  '$gold',
-                  style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () => _exchangeCoins(context, bronze, gold),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade700,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Canjear'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class ShopItem {
-  final String name;
-  final int price;
-  final String image;
-
-  ShopItem({required this.name, required this.price, required this.image});
-}
-
-class _ShopItemCard extends StatelessWidget {
-  final ShopItem item;
-  final bool isDarkMode;
-
-  const _ShopItemCard({required this.item, required this.isDarkMode});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: isDarkMode
-          ? Colors.black.withOpacity(0.4)
-          : Colors.white.withOpacity(0.6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: isDarkMode ? Colors.white.withOpacity(0.5) : Colors.black,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(item.image, width: 60, height: 60),
-          const SizedBox(height: 8),
-          Text(
-            item.name,
-            style: TextStyle(
-              color: isDarkMode ? Colors.white : Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '${item.price}',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Image.asset('assets/img/gold_coin.png', width: 16, height: 16),
-            ],
-          ),
+            )
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(icon: Icon(Icons.person), text: 'Personajes'),
+            Tab(icon: Icon(Icons.color_lens), text: 'Colores'),
+            Tab(icon: Icon(Icons.monetization_on), text: 'Monedas'),
+          ],
+        ),
+      ),
+      extendBodyBehindAppBar: true,
+      body: Container(
+        decoration: BoxDecoration(
+          image: DecorationImage(image: AssetImage(backgroundImage), fit: BoxFit.cover),
+        ),
+        child: SafeArea(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildPlaceholderTab('Personajes'),
+              const _ColorsShopView(),
+              _buildPlaceholderTab('Monedas'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderTab(String title) {
+    return Center(
+      child: Text(
+        'La sección de $title no está disponible.',
+        style: const TextStyle(color: Colors.white, fontSize: 18),
       ),
     );
   }
@@ -354,28 +97,172 @@ class _CoinDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isDarkMode
-            ? Colors.black.withOpacity(0.4)
-            : Colors.white.withOpacity(0.6),
+        color: Colors.black.withOpacity(0.4),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDarkMode ? Colors.white.withOpacity(0.5) : Colors.black,
-        ),
       ),
       child: Row(
         children: [
-          Image.asset(icon, width: 24, height: 24),
-          const SizedBox(width: 8),
-          Text(
-            '$amount',
-            style: TextStyle(
-              color: isDarkMode ? Colors.white : Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          Image.asset(icon, width: 20, height: 20),
+          const SizedBox(width: 4),
+          Text('$amount', style: const TextStyle(color: Colors.white, fontSize: 16)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ColorsShopView extends StatefulWidget {
+  const _ColorsShopView();
+
+  @override
+  State<_ColorsShopView> createState() => _ColorsShopViewState();
+}
+
+class _ColorsShopViewState extends State<_ColorsShopView> with SingleTickerProviderStateMixin {
+  late TabController _colorTabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _colorTabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _colorTabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _colorTabController,
+          tabs: const [Tab(text: 'PREMIUM'), Tab(text: 'ESPECIALES')],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _colorTabController,
+            children: const [_PremiumColorsGrid(), _SpecialColorsGrid()],
+          ),
+        )
+      ],
+    );
+  }
+}
+
+class _PremiumColorsGrid extends StatelessWidget {
+  const _PremiumColorsGrid();
+
+  static final List<Color> _premiumColors = List.generate(100, (index) => HSLColor.fromAHSL(1.0, (index * 3.6), 0.8, 0.6).toColor());
+  static const int _colorCost = 50;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, crossAxisSpacing: 10, mainAxisSpacing: 10),
+      itemCount: _premiumColors.length,
+      itemBuilder: (context, index) {
+        final color = _premiumColors[index];
+        return _ColorShopItem(color: color, cost: _colorCost);
+      },
+    );
+  }
+}
+
+class _SpecialColorsGrid extends StatelessWidget {
+  const _SpecialColorsGrid();
+
+  static const int _spainColorValue = 12345; // Special identifier
+  static final spainColor = const Color(_spainColorValue);
+  static final Map<Color, int> _specialColors = {spainColor: 50};
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 5, crossAxisSpacing: 10, mainAxisSpacing: 10),
+      itemCount: _specialColors.length,
+      itemBuilder: (context, index) {
+        final color = _specialColors.keys.elementAt(index);
+        final cost = _specialColors[color]!;
+        return _ColorShopItem(color: color, cost: cost, isSpecial: true);
+      },
+    );
+  }
+}
+
+class _ColorShopItem extends StatelessWidget {
+  final Color color;
+  final int cost;
+  final bool isSpecial;
+
+  const _ColorShopItem({required this.color, required this.cost, this.isSpecial = false});
+
+  Future<void> _purchaseColor(BuildContext context) async {
+    final userService = Provider.of<UserService>(context, listen: false);
+    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    final currentUser = userService.currentUser;
+
+    if (currentUser == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirmar Compra'),
+        content: Text('¿Deseas comprar este color por $cost monedas de oro?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Comprar')),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await firestoreService.purchaseAndUnlockColor(currentUser.alias, color.value, cost);
+        await userService.loadUser();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('¡Color comprado!'), backgroundColor: Colors.green));
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red));
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = Provider.of<UserService>(context).currentUser;
+    final isUnlocked = user?.unlockedColors.contains(color.value) ?? false;
+
+    return Card(
+      color: Colors.black.withOpacity(0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          isSpecial
+              ? Container(
+                  width: 50, height: 50, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1)),
+                  child: const Center(child: Text('🇪🇸', style: TextStyle(fontSize: 30)))
+              )
+              : Container(width: 50, height: 50, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+          ElevatedButton.icon(
+            onPressed: isUnlocked ? null : () => _purchaseColor(context),
+            icon: Icon(isUnlocked ? Icons.check : Icons.shopping_cart, size: 16),
+            label: Text(isUnlocked ? 'OK' : '$cost'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isUnlocked ? Colors.grey.shade700 : Colors.orange.shade700,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),
         ],

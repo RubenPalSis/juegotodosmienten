@@ -240,7 +240,8 @@ Route<dynamic>? _onGenerateRoute(RouteSettings settings) {
       page = const RoundResultScreen();
       break;
     case VoteScreen.routeName:
-      page = const VoteScreen();
+      final args = settings.arguments as Map<String, dynamic>;
+      page = VoteScreen(roomCode: args['roomCode']);
       break;
     case AliasScreen.routeName:
       page = const AliasScreen();

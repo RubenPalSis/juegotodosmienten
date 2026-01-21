@@ -15,18 +15,26 @@ class PlayerAvatar extends StatelessWidget {
     final alias = playerData['alias'] as String? ?? 'Desconocido';
     final isReady = playerData['isReady'] as bool? ?? false;
     final characterFile = playerData['selectedCharacter'] as String? ?? 'robot.glb';
+    final playerColorValue = playerData['color'] as int?;
+
+    // Lógica del color del borde: solo se muestra si el jugador está listo.
+    final Color borderColor;
+    if (isReady) {
+      borderColor = playerColorValue != null ? Color(playerColorValue) : Colors.green.shade300;
+    } else {
+      borderColor = Colors.white.withOpacity(0.2);
+    }
 
     return Card(
       color: cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: isReady ? Colors.green.shade300 : Colors.white.withOpacity(0.2), width: 2),
+        side: BorderSide(color: borderColor, width: 2),
       ),
       elevation: isReady ? 8.0 : 2.0,
-      shadowColor: isReady ? Colors.green.shade800 : Colors.transparent,
+      shadowColor: isReady ? borderColor.withOpacity(0.8) : Colors.transparent,
       child: Stack(
         children: [
-          // Model Viewer
           ModelViewer(
             src: 'assets/models/$characterFile',
             alt: "Avatar de $alias",
@@ -35,7 +43,6 @@ class PlayerAvatar extends StatelessWidget {
             disableZoom: true,
             backgroundColor: Colors.transparent,
           ),
-          // Player Alias
           Positioned(
             bottom: 8,
             left: 0,
@@ -51,7 +58,6 @@ class PlayerAvatar extends StatelessWidget {
               ),
             ),
           ),
-          // Ready Indicator
           if (isReady)
             Positioned(
               top: 8,

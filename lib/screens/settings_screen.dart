@@ -183,8 +183,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDarkMode = theme.brightness == Brightness.dark;
     final authService = Provider.of<AuthService>(context);
 
-    final fabBackgroundColor = isDarkMode ? Colors.black : Colors.white;
-    final fabIconColor = isDarkMode ? Colors.red : Colors.lightBlue;
+    final fabBackgroundColor = isDarkMode ? Colors.grey[800] : Colors.white;
+    final fabIconColor = isDarkMode ? Colors.white : Colors.lightBlue;
 
     final backgroundImage = isDarkMode
         ? 'assets/img/Backgound_darkMode.png'
@@ -193,12 +193,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBodyBehindAppBar: true,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).pop(),
-        backgroundColor: fabBackgroundColor,
-        child: Icon(Icons.arrow_back, color: fabIconColor),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       body: Stack(
         children: [
           Image.asset(
@@ -239,6 +233,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
+          Positioned(
+            top: 20,
+            left: 20,
+            child: FloatingActionButton(
+              onPressed: () => Navigator.of(context).pop(),
+              backgroundColor: fabBackgroundColor,
+              child: Icon(Icons.arrow_back, color: fabIconColor),
+            ),
+          ),
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.5),
@@ -255,10 +258,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
-        ),
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
       ),
     );
   }
@@ -314,6 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     horizontal: 40,
                     vertical: 16,
                   ),
+                  textStyle: theme.textTheme.labelLarge,
                 ),
                 child: const Text("Desvincular Cuenta"),
               ),
@@ -357,6 +361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     horizontal: 40,
                     vertical: 16,
                   ),
+                  textStyle: theme.textTheme.labelLarge,
                 ),
                 child: Text(
                   _codeSent
@@ -408,6 +413,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   horizontal: 40,
                   vertical: 16,
                 ),
+                textStyle: theme.textTheme.labelLarge,
               ),
               child: const Text("Enviar Mensaje de Ayuda"),
             ),

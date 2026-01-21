@@ -16,11 +16,13 @@ class CustomizeAvatarScreen extends StatelessWidget {
       builder: (context, themeService, child) {
         final isDarkMode =
             themeService.themeMode == ThemeMode.dark ||
-            (themeService.themeMode == ThemeMode.system &&
-                MediaQuery.of(context).platformBrightness == Brightness.dark);
+                (themeService.themeMode == ThemeMode.system &&
+                    MediaQuery.of(context).platformBrightness ==
+                        Brightness.dark);
 
-        final fabBackgroundColor = isDarkMode ? Colors.black : Colors.white;
-        final fabIconColor = isDarkMode ? Colors.white : Colors.black;
+        final fabBackgroundColor =
+            isDarkMode ? Colors.grey[800] : Colors.white;
+        final fabIconColor = isDarkMode ? Colors.white : Colors.lightBlue;
 
         final backgroundImage = isDarkMode
             ? 'assets/img/Backgound_darkMode.png'
@@ -28,6 +30,7 @@ class CustomizeAvatarScreen extends StatelessWidget {
 
         return Scaffold(
           backgroundColor: Colors.transparent,
+          extendBodyBehindAppBar: true,
           body: Stack(
             children: [
               Image.asset(
