@@ -50,5 +50,6 @@ flutter:
   assets:
     - assets/lang/
     - assets/lang/profanity_filter.json # Added profanity filter
+    - assets/lang/colors.json # Added colors definition
     - assets/models/
     - assets/img/

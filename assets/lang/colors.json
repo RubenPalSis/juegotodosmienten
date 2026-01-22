@@ -1,0 +1,32 @@
+{
+  "listcolors": {
+    "solidos": [
+      { "value": "#FF0000", "price": 100 },
+      { "value": "#00FF00", "price": 100 },
+      { "value": "#0000FF", "price": 100 },
+      { "value": "#FFFF00", "price": 100 },
+      { "value": "#FF00FF", "price": 100 },
+      { "value": "#00FFFF", "price": 100 },
+      { "value": "#FFA500", "price": 100 },
+      { "value": "#800080", "price": 100 },
+      { "value": "#FFFFFF", "price": 100 },
+      { "value": "#000000", "price": 100 },
+      { "value": "#A52A2A", "price": 100 },
+      { "value": "#8A2BE2", "price": 100 }
+    ],
+    "premium": [
+      { "name": "Amanecer", "type": "linear_gradient", "colors": ["#FFC3A0", "#FFAFBD"], "price": 250 },
+      { "name": "Océano", "type": "linear_gradient", "colors": ["#2193b0", "#6dd5ed"], "price": 250 },
+      { "name": "Neón", "type": "radial_gradient", "colors": ["#cc2b5e", "#753a88"], "price": 300 },
+      { "name": "Galaxia", "type": "radial_gradient", "colors": ["#4a00e0", "#8e2de2", "#000000"], "price": 300 },
+      { "name": "Fuego", "type": "linear_gradient", "colors": ["#f12711", "#f5af19"], "price": 250 },
+      { "name": "Bosque", "type": "linear_gradient", "colors": ["#134E5E", "#71B280"], "price": 250 }
+    ],
+    "especiales": [
+      { "name": "España", "type": "flag_gradient", "colors": ["#c60b1e", "#ffc400", "#c60b1e"], "stops": [0.25, 0.75], "price": 500 },
+      { "name": "Francia", "type": "flag_gradient", "colors": ["#0055A4", "#FFFFFF", "#EF4135"], "stops": [0.33, 0.66], "price": 500 },
+      { "name": "Italia", "type": "flag_gradient", "colors": ["#009246", "#FFFFFF", "#CE2B37"], "stops": [0.33, 0.66], "price": 500 },
+      { "name": "Argentina", "type": "flag_gradient", "colors": ["#74ACDF", "#FFFFFF", "#74ACDF"], "stops": [0.3, 0.7], "price": 500 }
+    ]
+  }
+}
